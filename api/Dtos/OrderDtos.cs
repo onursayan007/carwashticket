@@ -17,3 +17,8 @@ public record CreateOrderResponse(
     OrderStatus Status,
     decimal Amount,
     string? RedirectUrl);
+
+public record OrderStatusResponse(
+    Guid OrderId,
+    OrderStatus Status,
+    decimal Amount);

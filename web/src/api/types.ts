@@ -148,6 +148,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderStatusResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "Idempotency-Key"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateOrderRequest"];
+                    "text/json": components["schemas"]["CreateOrderRequest"];
+                    "application/*+json": components["schemas"]["CreateOrderRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreateOrderResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Bad Gateway */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stations": {
         parameters: {
             query?: never;
@@ -239,10 +364,33 @@ export interface components {
             expiresAt?: string;
             user?: components["schemas"]["UserDto"];
         };
+        CreateOrderRequest: {
+            /** Format: uuid */
+            stationId: string;
+            /** Format: uuid */
+            serviceId: string;
+        };
+        CreateOrderResponse: {
+            /** Format: uuid */
+            orderId?: string;
+            status?: components["schemas"]["OrderStatus"];
+            /** Format: double */
+            amount?: number;
+            redirectUrl?: string | null;
+        };
         LoginRequest: {
             /** Format: email */
             email: string;
             password: string;
+        };
+        /** @enum {string} */
+        OrderStatus: "Created" | "AwaitingPayment" | "Paid" | "Redeemed" | "Settled" | "Failed" | "Expired" | "Refunded";
+        OrderStatusResponse: {
+            /** Format: uuid */
+            orderId?: string;
+            status?: components["schemas"]["OrderStatus"];
+            /** Format: double */
+            amount?: number;
         };
         ProblemDetails: {
             type?: string | null;

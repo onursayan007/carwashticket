@@ -155,6 +155,17 @@ public class OrderService(
         return new OrderCreationResult(OrderCreationOutcome.Created, ToResponse(order), null);
     }
 
+    // Müşteri sadece kendi siparişini sorgulayabilir.
+    public Task<OrderStatusResponse?> GetStatusAsync(
+        Guid customerId,
+        Guid orderId,
+        CancellationToken ct = default)
+        => db.Orders
+            .AsNoTracking()
+            .Where(o => o.Id == orderId && o.CustomerId == customerId)
+            .Select(o => new OrderStatusResponse(o.Id, o.Status, o.Amount))
+            .FirstOrDefaultAsync(ct);
+
     // Ödemeyi kesinleştirir: durum Paid'e geçer, bilet üretilir, defter kayıtları
     // yazılır. Üçü tek SaveChanges ile, yani tek transaction'da commit edilir.
     public async Task<PaymentConfirmationOutcome> ConfirmPaymentAsync(

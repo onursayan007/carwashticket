@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Entities;
 using CarWashTicket.Api.Ledger;
@@ -112,7 +113,10 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = [] });
 });
 
-builder.Services.AddControllers();
+// Enum'lar JSON'da sayı değil metin olsun: istemci 2 yerine "Paid" görür ve
+// enum'a ortadan değer eklenince istemci bozulmaz.
+builder.Services.AddControllers().AddJsonOptions(options =>
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // --- Uygulama servisleri ---
 builder.Services.AddScoped<TokenService>();

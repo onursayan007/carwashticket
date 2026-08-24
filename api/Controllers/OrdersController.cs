@@ -12,6 +12,18 @@ namespace CarWashTicket.Api.Controllers;
 [Authorize(Roles = "Customer")]
 public class OrdersController(OrderService orderService) : ControllerBase
 {
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<OrderStatusResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrderStatusResponse>> GetById(Guid id, CancellationToken ct)
+    {
+        var customerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var order = await orderService.GetStatusAsync(customerId, id, ct);
+
+        return order is null ? NotFound() : Ok(order);
+    }
+
     [HttpPost]
     [ProducesResponseType<CreateOrderResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

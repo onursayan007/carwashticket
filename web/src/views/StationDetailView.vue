@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { apiFetch, errorMessage } from '@/api/client'
-import type { StationDetailDto } from '@/types'
+import type { CreateOrderResponse, StationDetailDto } from '@/types'
 
 const props = defineProps<{ id: string }>()
 
@@ -9,6 +9,13 @@ const station = ref<StationDetailDto | null>(null)
 const selectedServiceId = ref<string | null>(null)
 const error = ref<string | null>(null)
 const loading = ref(true)
+
+const checkoutError = ref<string | null>(null)
+const submitting = ref(false)
+
+// Aynı seçim için sabit kalır: istek başarısız olup tekrar denenirse sunucu
+// bunu aynı sipariş olarak tanır. Seçim değişince yenilenir.
+const idempotencyKey = ref(crypto.randomUUID())
 
 const money = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })
 
@@ -25,6 +32,40 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+watch(selectedServiceId, () => {
+  idempotencyKey.value = crypto.randomUUID()
+  checkoutError.value = null
+})
+
+async function startCheckout() {
+  if (!station.value || !selectedService.value || submitting.value) {
+    return
+  }
+
+  submitting.value = true
+  checkoutError.value = null
+
+  try {
+    const order = await apiFetch<CreateOrderResponse>('/api/orders', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey.value },
+      body: { stationId: station.value.id, serviceId: selectedService.value.id },
+    })
+
+    if (!order.redirectUrl) {
+      checkoutError.value = 'Ödeme adresi alınamadı.'
+      return
+    }
+
+    // SPA'dan çıkıp sağlayıcının 3DS ekranına gidiyoruz.
+    window.location.href = order.redirectUrl
+  } catch (err) {
+    checkoutError.value = errorMessage(err, 'Sipariş oluşturulamadı.')
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -88,23 +129,35 @@ onMounted(async () => {
       </template>
     </div>
 
-    <!-- Ödeme akışı ayrı bir görevde bağlanacak. -->
     <div
       v-if="selectedService"
       class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white p-4"
     >
-      <div class="mx-auto flex max-w-2xl items-center justify-between gap-4">
-        <span class="min-w-0 text-sm text-slate-600">
-          <span class="block truncate font-medium text-slate-900">{{ selectedService.name }}</span>
-          {{ money.format(selectedService.price) }}
-        </span>
-        <button
-          type="button"
-          disabled
-          class="shrink-0 rounded-lg bg-slate-900 px-5 py-2 font-medium text-white disabled:opacity-50"
+      <div class="mx-auto max-w-2xl space-y-3">
+        <p
+          v-if="checkoutError"
+          class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+          role="alert"
         >
-          Devam et
-        </button>
+          {{ checkoutError }}
+        </p>
+
+        <div class="flex items-center justify-between gap-4">
+          <span class="min-w-0 text-sm text-slate-600">
+            <span class="block truncate font-medium text-slate-900">
+              {{ selectedService.name }}
+            </span>
+            {{ money.format(selectedService.price) }}
+          </span>
+          <button
+            type="button"
+            :disabled="submitting"
+            class="shrink-0 rounded-lg bg-slate-900 px-5 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            @click="startCheckout"
+          >
+            {{ submitting ? 'Yönlendiriliyor…' : 'Devam et' }}
+          </button>
+        </div>
       </div>
     </div>
   </main>

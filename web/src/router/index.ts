@@ -32,6 +32,12 @@ const routes: RouteRecordRaw[] = [
     meta: { roles: ['Customer'] },
   },
   {
+    path: '/odeme/sonuc',
+    name: 'payment-result',
+    component: () => import('@/views/PaymentResultView.vue'),
+    meta: { roles: ['Customer'] },
+  },
+  {
     path: '/scan',
     name: 'scan',
     component: () => import('@/views/ScanView.vue'),
