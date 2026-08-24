@@ -18,8 +18,19 @@ function isUnauthorized(error: unknown): boolean {
   return error instanceof FetchError && error.statusCode === 401
 }
 
+// Sunucudan yanıt hiç gelmediyse (ağ hatası, güvenilmeyen sertifika, API kapalı)
+// response boş kalır. Bunu 401 ile karıştırmamak önemli: aksi halde ulaşılamayan
+// sunucu "şifre hatalı" gibi görünür.
+function isUnreachable(error: unknown): boolean {
+  return error instanceof FetchError && error.response === undefined
+}
+
 // Kullanıcıya gösterilecek mesaj. ProblemDetails/ValidationProblemDetails ikisini de karşılar.
 export function errorMessage(error: unknown, fallback = 'Bir hata oluştu.'): string {
+  if (isUnreachable(error)) {
+    return 'Sunucuya ulaşılamıyor. API çalışıyor mu ve sertifikası kabul edildi mi?'
+  }
+
   if (!(error instanceof FetchError)) {
     return fallback
   }
