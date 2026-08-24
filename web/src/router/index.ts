@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationRaw, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { Role } from '@/types'
 
@@ -25,6 +25,13 @@ const routes: RouteRecordRaw[] = [
     meta: { roles: ['Customer'] },
   },
   {
+    path: '/stations/:id',
+    name: 'station-detail',
+    component: () => import('@/views/StationDetailView.vue'),
+    props: true,
+    meta: { roles: ['Customer'] },
+  },
+  {
     path: '/scan',
     name: 'scan',
     component: () => import('@/views/ScanView.vue'),
@@ -48,6 +55,15 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
+// Rol başına açılış ekranı. Birden fazla rolü olana en yetkilisi verilir.
+export function homeRouteFor(roles: readonly Role[]): RouteLocationRaw {
+  if (roles.includes('Manager')) return { name: 'manage' }
+  if (roles.includes('Staff')) return { name: 'scan' }
+  if (roles.includes('Customer')) return { name: 'stations' }
+
+  return { name: 'forbidden' }
+}
+
 export const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -57,6 +73,10 @@ export const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.initialize()
+
+  if (to.name === 'login' && auth.isAuthenticated) {
+    return homeRouteFor(auth.roles)
+  }
 
   if (to.meta.public) {
     return true
@@ -68,8 +88,9 @@ router.beforeEach(async (to) => {
 
   const required = to.meta.roles
 
+  // Rolü uymayan kullanıcı hata sayfası yerine kendi ekranına gönderilir.
   if (required && required.length > 0 && !auth.hasAnyRole(required)) {
-    return { name: 'forbidden' }
+    return homeRouteFor(auth.roles)
   }
 
   return true
