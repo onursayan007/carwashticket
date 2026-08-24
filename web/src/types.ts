@@ -39,6 +39,16 @@ export type TicketListItemDto = Omit<Required<Schemas['TicketListItemDto']>, 're
   redeemedAt: string | null
 }
 
+export type PanelSummaryDto = Required<Schemas['PanelSummaryDto']>
+
+export type PanelOrderDto = Required<Schemas['PanelOrderDto']>
+
+export type PanelServiceDto = Omit<Required<Schemas['PanelServiceDto']>, 'description'> & {
+  description: string | null
+}
+
+export type UpsertServiceRequest = Schemas['UpsertServiceRequest']
+
 export type RedeemTicketRequest = Required<Schemas['RedeemTicketRequest']>
 
 export type RedeemTicketResponse = Omit<

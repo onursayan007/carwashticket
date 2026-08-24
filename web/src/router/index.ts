@@ -52,7 +52,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/manage',
     name: 'manage',
-    component: () => import('@/views/ManageView.vue'),
+    component: () => import('@/views/PanelView.vue'),
     meta: { roles: ['Manager'] },
   },
   {
