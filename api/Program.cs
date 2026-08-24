@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Entities;
+using CarWashTicket.Api.Payments;
 using CarWashTicket.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -113,7 +114,8 @@ builder.Services.AddControllers();
 
 // --- Uygulama servisleri ---
 builder.Services.AddScoped<TokenService>();
-// TODO: IPaymentProvider, OrderStateMachine vb. buraya.
+builder.Services.AddPaymentProvider(builder.Configuration, builder.Environment);
+// TODO: OrderStateMachine vb. buraya.
 
 var app = builder.Build();
 
