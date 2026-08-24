@@ -148,3 +148,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// WebApplicationFactory<Program> testlerden erişebilsin diye.
+public partial class Program;
