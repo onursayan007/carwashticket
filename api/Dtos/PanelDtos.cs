@@ -16,7 +16,8 @@ public record PanelSummaryDto(
 public record PanelOrderDto(
     Guid Id,
     DateTimeOffset CreatedAt,
-    string ServiceName,
+    // Kalemlerin özeti: "2 x Su, 1 x Köpük".
+    string ItemSummary,
     decimal Amount,
     decimal CommissionAmount,
     OrderStatus Status);
@@ -25,6 +26,7 @@ public record PanelServiceDto(
     Guid Id,
     string Name,
     string? Description,
+    ServiceKind Kind,
     decimal Price,
     int DurationMinutes,
     bool IsActive);
@@ -36,6 +38,8 @@ public record UpsertServiceRequest
 
     [MaxLength(1000)]
     public string? Description { get; init; }
+
+    public ServiceKind Kind { get; init; }
 
     [Range(0.01, 1_000_000)]
     public decimal Price { get; init; }

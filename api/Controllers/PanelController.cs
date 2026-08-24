@@ -11,7 +11,7 @@ namespace CarWashTicket.Api.Controllers;
 [ApiController]
 [Route("api/panel")]
 [Produces("application/json")]
-[Authorize(Roles = "Manager")]
+[Authorize(Roles = Roles.Business)]
 public class PanelController(AppDbContext db) : ControllerBase
 {
     // Listede en fazla bu kadar sipariş döner; sayfalama gerekirse ayrıca eklenir.
@@ -100,7 +100,8 @@ public class PanelController(AppDbContext db) : ControllerBase
             .Select(o => new PanelOrderDto(
                 o.Id,
                 o.CreatedAt,
-                o.Service.Name,
+                // Çok kalemli sipariş: "2 x Su, 1 x Köpük".
+                string.Join(", ", o.Items.Select(i => i.Quantity + " x " + i.ServiceName)),
                 o.Amount,
                 o.CommissionAmount,
                 o.Status))
@@ -128,7 +129,7 @@ public class PanelController(AppDbContext db) : ControllerBase
             .Where(s => s.StationId == station.Value)
             .OrderBy(s => s.Price)
             .Select(s => new PanelServiceDto(
-                s.Id, s.Name, s.Description, s.Price, s.DurationMinutes, s.IsActive))
+                s.Id, s.Name, s.Description, s.Kind, s.Price, s.DurationMinutes, s.IsActive))
             .ToListAsync(ct);
 
         return Ok(services);
@@ -155,6 +156,7 @@ public class PanelController(AppDbContext db) : ControllerBase
             StationId = station.Value,
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
+            Kind = request.Kind,
             Price = request.Price,
             DurationMinutes = request.DurationMinutes,
             IsActive = request.IsActive,
@@ -167,7 +169,7 @@ public class PanelController(AppDbContext db) : ControllerBase
         return CreatedAtAction(
             nameof(GetServices),
             new PanelServiceDto(
-                service.Id, service.Name, service.Description, service.Price,
+                service.Id, service.Name, service.Description, service.Kind, service.Price,
                 service.DurationMinutes, service.IsActive));
     }
 
@@ -199,6 +201,7 @@ public class PanelController(AppDbContext db) : ControllerBase
 
         service.Name = request.Name.Trim();
         service.Description = request.Description?.Trim();
+        service.Kind = request.Kind;
         service.Price = request.Price;
         service.DurationMinutes = request.DurationMinutes;
         service.IsActive = request.IsActive;
@@ -206,7 +209,7 @@ public class PanelController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync(ct);
 
         return Ok(new PanelServiceDto(
-            service.Id, service.Name, service.Description, service.Price,
+            service.Id, service.Name, service.Description, service.Kind, service.Price,
             service.DurationMinutes, service.IsActive));
     }
 
@@ -218,7 +221,7 @@ public class PanelController(AppDbContext db) : ControllerBase
 
         var stations = await db.StationStaff
             .AsNoTracking()
-            .Where(ss => ss.UserId == managerId && ss.Role == StationRole.Manager)
+            .Where(ss => ss.UserId == managerId && ss.Role == StationRole.Business)
             .Select(ss => ss.StationId)
             .ToListAsync(ct);
 

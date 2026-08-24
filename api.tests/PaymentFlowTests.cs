@@ -16,7 +16,7 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Ayni_idempotency_key_ile_iki_istek_tek_siparis_yaratir()
     {
         var (stationId, serviceId) = await _world.CreateStationAsync();
-        var customer = await _world.CreateClientAsync("Customer");
+        var customer = await _world.CreateClientAsync(Roles.Customer);
         var key = Guid.NewGuid().ToString();
 
         var first = await CreateOrderAsync(customer, stationId, serviceId, key);
@@ -34,7 +34,7 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Ayni_provider_event_id_ile_iki_webhook_tek_kez_islenir()
     {
         var (stationId, serviceId) = await _world.CreateStationAsync();
-        var customer = await _world.CreateClientAsync("Customer");
+        var customer = await _world.CreateClientAsync(Roles.Customer);
 
         var order = await CreateOrderAsync(customer, stationId, serviceId, Guid.NewGuid().ToString());
 
@@ -60,8 +60,8 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Ayni_bilet_ikinci_kez_okutulamaz()
     {
         var (stationId, serviceId) = await _world.CreateStationAsync();
-        var customer = await _world.CreateClientAsync("Customer");
-        var staff = await _world.CreateClientAsync("Staff", stationId);
+        var customer = await _world.CreateClientAsync(Roles.Customer);
+        var staff = await _world.CreateClientAsync(Roles.Scanner, stationId);
 
         var order = await CreateOrderAsync(customer, stationId, serviceId, Guid.NewGuid().ToString());
         await SendWebhookAsync(order.OrderId, $"evt_{Guid.NewGuid():N}", 250.00m);
@@ -87,7 +87,7 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Odenmemis_siparis_icin_bilet_uretilmez()
     {
         var (stationId, serviceId) = await _world.CreateStationAsync();
-        var customer = await _world.CreateClientAsync("Customer");
+        var customer = await _world.CreateClientAsync(Roles.Customer);
 
         var order = await CreateOrderAsync(customer, stationId, serviceId, Guid.NewGuid().ToString());
 
@@ -106,7 +106,7 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Bir_siparisin_defter_kayitlarinin_toplami_sifirdir()
     {
         var (stationId, serviceId) = await _world.CreateStationAsync(price: 333.33m);
-        var customer = await _world.CreateClientAsync("Customer");
+        var customer = await _world.CreateClientAsync(Roles.Customer);
 
         var order = await CreateOrderAsync(customer, stationId, serviceId, Guid.NewGuid().ToString());
         await SendWebhookAsync(order.OrderId, $"evt_{Guid.NewGuid():N}", 333.33m);
@@ -135,8 +135,8 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var (ownStationId, _) = await _world.CreateStationAsync();
         var (otherStationId, otherServiceId) = await _world.CreateStationAsync();
 
-        var manager = await _world.CreateClientAsync("Manager", ownStationId);
-        var customer = await _world.CreateClientAsync("Customer");
+        var manager = await _world.CreateClientAsync(Roles.Business, ownStationId);
+        var customer = await _world.CreateClientAsync(Roles.Customer);
 
         // Diğer istasyonda gerçek bir sipariş var; yönetici onu görememeli.
         await CreateOrderAsync(customer, otherStationId, otherServiceId, Guid.NewGuid().ToString());
@@ -155,6 +155,59 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Empty(orders!);
     }
 
+    // Altı testin dışında: çok kalemli siparişin çekirdek davranışı.
+    [Fact]
+    public async Task Cok_kalemli_siparis_her_birim_icin_ayri_bilet_uretir()
+    {
+        var (stationId, suId) = await _world.CreateStationAsync(price: 30.00m);
+        var kopukId = await _world.AddServiceAsync(stationId, "Köpük", 45.00m);
+        var customer = await _world.CreateClientAsync(Roles.Customer);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/orders")
+        {
+            Content = JsonContent.Create(new
+            {
+                stationId,
+                items = new[]
+                {
+                    new { serviceId = suId, quantity = 2 },
+                    new { serviceId = kopukId, quantity = 1 }
+                }
+            })
+        };
+
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+
+        var response = await customer.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var order = (await response.Content.ReadFromJsonAsync<CreatedOrder>())!;
+
+        // 2 x 30 + 1 x 45
+        Assert.Equal(105.00m, order.Amount);
+
+        await SendWebhookAsync(order.OrderId, $"evt_{Guid.NewGuid():N}", 105.00m);
+
+        using var scope = _world.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var tickets = await db.Tickets
+            .Where(t => t.OrderId == order.OrderId)
+            .Select(t => t.ServiceName)
+            .ToListAsync();
+
+        Assert.Equal(3, tickets.Count);
+        Assert.Equal(2, tickets.Count(n => n == "Su"));
+        Assert.Equal(1, tickets.Count(n => n == "Köpük"));
+
+        // Her biletin kodu ayrı olmalı; aksi halde biri diğerini tüketirdi.
+        Assert.Equal(3, await db.Tickets
+            .Where(t => t.OrderId == order.OrderId)
+            .Select(t => t.Code)
+            .Distinct()
+            .CountAsync());
+    }
+
     private static async Task<CreatedOrder> CreateOrderAsync(
         HttpClient client,
         Guid stationId,
@@ -163,7 +216,7 @@ public class PaymentFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/orders")
         {
-            Content = JsonContent.Create(new { stationId, serviceId })
+            Content = JsonContent.Create(new { stationId, items = new[] { new { serviceId, quantity = 1 } } })
         };
 
         request.Headers.Add("Idempotency-Key", idempotencyKey);

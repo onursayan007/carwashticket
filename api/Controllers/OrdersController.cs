@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CarWashTicket.Api.Dtos;
+using CarWashTicket.Api.Entities;
 using CarWashTicket.Api.Orders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace CarWashTicket.Api.Controllers;
 [ApiController]
 [Route("api/orders")]
 [Produces("application/json")]
-[Authorize(Roles = "Customer")]
+[Authorize(Roles = Roles.Customer)]
 public class OrdersController(OrderService orderService) : ControllerBase
 {
     [HttpGet("{id:guid}")]

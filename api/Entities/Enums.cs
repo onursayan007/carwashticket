@@ -24,8 +24,25 @@ public enum TicketStatus
 // Kullanıcının istasyondaki görevi.
 public enum StationRole
 {
-    Staff = 0,
-    Manager = 1
+    Scanner = 0,
+    Business = 1
+}
+
+// İşyerinin sunduğu yıkama biçimi.
+public enum StationType
+{
+    SelfService = 0,
+    FullService = 1,
+    Both = 2
+}
+
+// Hizmetin niteliği. Self serviste adet alınır, tam hizmette paket satılır.
+public enum ServiceKind
+{
+    // Su, köpük, cila gibi tek kullanımlık birim.
+    Unit = 0,
+    // Her şey dahil yıkama paketi.
+    Package = 1
 }
 
 // Çift kayıtta satırın yönü.

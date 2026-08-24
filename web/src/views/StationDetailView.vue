@@ -50,7 +50,10 @@ async function startCheckout() {
     const order = await apiFetch<CreateOrderResponse>('/api/orders', {
       method: 'POST',
       headers: { 'Idempotency-Key': idempotencyKey.value },
-      body: { stationId: station.value.id, serviceId: selectedService.value.id },
+      body: {
+        stationId: station.value.id,
+        items: [{ serviceId: selectedService.value.id, quantity: 1 }],
+      },
     })
 
     if (!order.redirectUrl) {

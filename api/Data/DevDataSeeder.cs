@@ -9,7 +9,33 @@ public static class DevDataSeeder
 {
     private const string DemoPassword = "Demo123!";
 
-    private static readonly string[] Roles = ["Customer", "Staff", "Manager"];
+    private static Service Unit(
+        Guid stationId, string name, string description, decimal price, int minutes, DateTimeOffset now)
+        => Build(stationId, name, description, ServiceKind.Unit, price, minutes, now);
+
+    private static Service Package(
+        Guid stationId, string name, string description, decimal price, int minutes, DateTimeOffset now)
+        => Build(stationId, name, description, ServiceKind.Package, price, minutes, now);
+
+    private static Service Build(
+        Guid stationId,
+        string name,
+        string description,
+        ServiceKind kind,
+        decimal price,
+        int minutes,
+        DateTimeOffset now) => new()
+        {
+            Id = Guid.NewGuid(),
+            StationId = stationId,
+            Name = name,
+            Description = description,
+            Kind = kind,
+            Price = price,
+            DurationMinutes = minutes,
+            IsActive = true,
+            CreatedAt = now
+        };
 
     public static async Task SeedAsync(IServiceProvider services)
     {
@@ -27,7 +53,7 @@ public static class DevDataSeeder
 
         var now = DateTimeOffset.UtcNow;
 
-        foreach (var role in Roles)
+        foreach (var role in Entities.Roles.All)
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
@@ -35,84 +61,85 @@ public static class DevDataSeeder
             }
         }
 
-        var station = new Station
+        // Self servis: birim satılır, müşteri kendi yıkar.
+        var selfService = new Station
         {
             Id = Guid.NewGuid(),
-            Name = "Merkez Petrol - Kadıköy",
-            Address = "Bağdat Caddesi No:120, Kadıköy / İstanbul",
-            PhoneNumber = "02165550101",
+            Name = "Elmalı Petrol Self Servis",
+            Type = StationType.SelfService,
+            Address = "Zafer Mahallesi, Antalya Caddesi No:42",
+            City = "Antalya",
+            District = "Elmalı",
+            Latitude = 36.7387,
+            Longitude = 29.9075,
+            CompanyName = "Elmalı Akaryakıt Ltd. Şti.",
+            TaxNumber = "1234567890",
+            TaxOffice = "Elmalı",
+            ContactEmail = "isyeri@test.com",
+            PhoneNumber = "02428110101",
+            RatingAverage = 4.30m,
+            RatingCount = 27,
             IsActive = true,
             CreatedAt = now
         };
 
-        db.Stations.Add(station);
+        // Tam hizmet: paket satılır, personel aracı teslim alır.
+        var fullService = new Station
+        {
+            Id = Guid.NewGuid(),
+            Name = "Lara Oto Kuaför",
+            Type = StationType.FullService,
+            Address = "Fener Mahallesi, Lara Caddesi No:7",
+            City = "Antalya",
+            District = "Muratpaşa",
+            Latitude = 36.8529,
+            Longitude = 30.7610,
+            CompanyName = "Lara Oto Bakım A.Ş.",
+            TaxNumber = "9876543210",
+            TaxOffice = "Muratpaşa",
+            ContactEmail = "lara@test.com",
+            PhoneNumber = "02423330202",
+            RatingAverage = 4.80m,
+            RatingCount = 112,
+            IsActive = true,
+            CreatedAt = now
+        };
+
+        db.Stations.AddRange(selfService, fullService);
 
         db.Services.AddRange(
-            new Service
-            {
-                Id = Guid.NewGuid(),
-                StationId = station.Id,
-                Name = "Hızlı Dış Yıkama",
-                Description = "Sadece dış gövde köpük ve durulama.",
-                Price = 250.00m,
-                DurationMinutes = 15,
-                IsActive = true,
-                CreatedAt = now
-            },
-            new Service
-            {
-                Id = Guid.NewGuid(),
-                StationId = station.Id,
-                Name = "Dış Yıkama + Kurulama",
-                Description = "Dış yıkama, el ile kurulama ve jant temizliği.",
-                Price = 400.00m,
-                DurationMinutes = 25,
-                IsActive = true,
-                CreatedAt = now
-            },
-            new Service
-            {
-                Id = Guid.NewGuid(),
-                StationId = station.Id,
-                Name = "İç Dış Detaylı Temizlik",
-                Description = "Dış yıkama, iç süpürme, torpido ve cam temizliği.",
-                Price = 750.00m,
-                DurationMinutes = 50,
-                IsActive = true,
-                CreatedAt = now
-            },
-            new Service
-            {
-                Id = Guid.NewGuid(),
-                StationId = station.Id,
-                Name = "Cilalı Full Bakım",
-                Description = "İç dış detaylı temizlik, cila ve koltuk şampuanlama.",
-                Price = 1200.00m,
-                DurationMinutes = 90,
-                IsActive = true,
-                CreatedAt = now
-            });
+            Unit(selfService.Id, "Su", "Yüksek basınçlı su, 1 kullanım.", 30.00m, 4, now),
+            Unit(selfService.Id, "Köpük", "Aktif köpük, 1 kullanım.", 45.00m, 4, now),
+            Unit(selfService.Id, "Cila", "Sıvı cila, 1 kullanım.", 60.00m, 3, now),
+            Unit(selfService.Id, "Süpürge", "Elektrikli süpürge, 1 kullanım.", 25.00m, 5, now),
+
+            Package(fullService.Id, "Dış Yıkama", "Dış gövde köpük, durulama, kurulama.", 400.00m, 25, now),
+            Package(fullService.Id, "İç Dış Detaylı", "Dış yıkama, iç süpürme, torpido ve cam.", 750.00m, 50, now),
+            Package(fullService.Id, "Cilalı Full Bakım", "Detaylı temizlik, cila, koltuk şampuanlama.", 1200.00m, 90, now));
+
+        var station = selfService;
 
         await db.SaveChangesAsync();
 
         // UserManager kendi kaydını yapar, bu yüzden istasyondan sonra çağrılıyor.
-        await CreateUserAsync(userManager, "demo@test.com", "Demo Müşteri", "Customer", now);
-        var staff = await CreateUserAsync(userManager, "staff@test.com", "Yıkama Personeli", "Staff", now);
-        var manager = await CreateUserAsync(userManager, "manager@test.com", "İstasyon Müdürü", "Manager", now);
+        await CreateUserAsync(userManager, "demo@test.com", "Demo Müşteri", Entities.Roles.Customer, now);
+        var staff = await CreateUserAsync(userManager, "staff@test.com", "Yıkama Personeli", Entities.Roles.Scanner, now);
+        var business = await CreateUserAsync(userManager, "isyeri@test.com", "İşyeri Sahibi", Entities.Roles.Business, now);
+        await CreateUserAsync(userManager, "admin@test.com", "Platform Yöneticisi", Entities.Roles.Admin, now);
 
         db.StationStaff.AddRange(
             new StationStaff
             {
                 StationId = station.Id,
                 UserId = staff.Id,
-                Role = StationRole.Staff,
+                Role = StationRole.Scanner,
                 AssignedAt = now
             },
             new StationStaff
             {
                 StationId = station.Id,
-                UserId = manager.Id,
-                Role = StationRole.Manager,
+                UserId = business.Id,
+                Role = StationRole.Business,
                 AssignedAt = now
             });
 

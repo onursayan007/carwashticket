@@ -61,35 +61,65 @@ public class OrderService(
                     "Bu Idempotency-Key başka bir kullanıcıya ait.");
         }
 
-        // Kural 8: hizmet daima istasyonla birlikte doğrulanır.
-        var service = await db.Services
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                s => s.Id == request.ServiceId
-                     && s.StationId == request.StationId
-                     && s.IsActive
-                     && s.Station.IsActive,
-                ct);
+        if (request.Items.Count == 0)
+        {
+            return new OrderCreationResult(
+                OrderCreationOutcome.ServiceNotFound, null, "Sipariş boş olamaz.");
+        }
 
-        if (service is null)
+        var requestedIds = request.Items.Select(i => i.ServiceId).Distinct().ToList();
+
+        // Kural 8: hizmetler daima istasyonla birlikte doğrulanır.
+        var services = await db.Services
+            .AsNoTracking()
+            .Where(s => requestedIds.Contains(s.Id)
+                        && s.StationId == request.StationId
+                        && s.IsActive
+                        && s.Station.IsActive)
+            .ToDictionaryAsync(s => s.Id, ct);
+
+        // Bir tanesi bile eksikse siparişi hiç açmıyoruz.
+        if (services.Count != requestedIds.Count)
         {
             return new OrderCreationResult(
                 OrderCreationOutcome.ServiceNotFound,
                 null,
-                "Hizmet bulunamadı veya aktif değil.");
+                "Hizmetlerden biri bulunamadı veya aktif değil.");
         }
+
+        var orderId = Guid.NewGuid();
+
+        var items = request.Items
+            .Select(i =>
+            {
+                var service = services[i.ServiceId];
+
+                return new OrderItem
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = orderId,
+                    ServiceId = service.Id,
+                    ServiceName = service.Name,
+                    UnitPrice = service.Price,
+                    Quantity = i.Quantity,
+                    LineTotal = service.Price * i.Quantity
+                };
+            })
+            .ToList();
+
+        var total = items.Sum(i => i.LineTotal);
 
         var order = new Order
         {
-            Id = Guid.NewGuid(),
-            StationId = service.StationId,
+            Id = orderId,
+            StationId = request.StationId,
             CustomerId = customerId,
-            ServiceId = service.Id,
-            Amount = service.Price,
-            CommissionAmount = CalculateCommission(service.Price),
+            Amount = total,
+            CommissionAmount = CalculateCommission(total),
             IdempotencyKey = idempotencyKey,
             ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(CheckoutTimeoutMinutes),
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            Items = items
             // Status yazılmıyor: OrderStatus varsayılanı Created ve setter private.
         };
 
@@ -116,7 +146,11 @@ public class OrderService(
             return Replay(winner);
         }
 
-        return await StartCheckoutAsync(order, service.Name, customerEmail, ct);
+        var description = items.Count == 1
+            ? $"{items[0].Quantity} x {items[0].ServiceName}"
+            : $"{items.Sum(i => i.Quantity)} kalem yıkama hizmeti";
+
+        return await StartCheckoutAsync(order, description, customerEmail, ct);
     }
 
     private async Task<OrderCreationResult> StartCheckoutAsync(
@@ -175,7 +209,8 @@ public class OrderService(
         CancellationToken ct = default)
     {
         var order = await db.Orders
-            .Include(o => o.Ticket)
+            .Include(o => o.Items)
+            .Include(o => o.Tickets)
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
         if (order is null)
@@ -213,7 +248,7 @@ public class OrderService(
             order.ProviderPaymentId = providerPaymentId;
         }
 
-        db.Tickets.Add(BuildTicket(order));
+        db.Tickets.AddRange(BuildTickets(order));
         ledger.AddPaymentEntries(order);
 
         await db.SaveChangesAsync(ct);
@@ -236,20 +271,27 @@ public class OrderService(
         await db.SaveChangesAsync(ct);
     }
 
-    private Ticket BuildTicket(Order order)
+    // Satın alınan her birim için ayrı bilet: 2 su + 1 köpük -> 3 bilet.
+    // Her biri makinede/personelde tek tek okutulur.
+    private List<Ticket> BuildTickets(Order order)
     {
         var now = DateTimeOffset.UtcNow;
+        var expiresAt = now.AddDays(configuration.GetValue("Ticket:ValidDays", 30));
 
-        return new Ticket
-        {
-            Id = Guid.NewGuid(),
-            OrderId = order.Id,
-            StationId = order.StationId,
-            Code = TicketService.GenerateCode(),
-            Status = TicketStatus.Issued,
-            IssuedAt = now,
-            ExpiresAt = now.AddDays(configuration.GetValue("Ticket:ValidDays", 30))
-        };
+        return order.Items
+            .SelectMany(item => Enumerable.Range(0, item.Quantity).Select(_ => new Ticket
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                StationId = order.StationId,
+                ServiceId = item.ServiceId,
+                ServiceName = item.ServiceName,
+                Code = TicketService.GenerateCode(),
+                Status = TicketStatus.Issued,
+                IssuedAt = now,
+                ExpiresAt = expiresAt
+            }))
+            .ToList();
     }
 
     private Task<Order?> FindByKeyAsync(string idempotencyKey, CancellationToken ct)

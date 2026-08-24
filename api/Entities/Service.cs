@@ -11,6 +11,9 @@ public class Service
 
     public string? Description { get; set; }
 
+    public ServiceKind Kind { get; set; }
+
+    // Unit için birim fiyat (1 su), Package için paket fiyatı.
     public decimal Price { get; set; }
 
     // Yıkamanın tahmini süresi.

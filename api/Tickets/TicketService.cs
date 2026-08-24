@@ -72,11 +72,18 @@ public class TicketService(
 
         var ticket = await db.Tickets
             .Include(t => t.Order)
-            .ThenInclude(o => o.Service)
+            .ThenInclude(o => o.Tickets)
             .FirstAsync(t => t.Code == code, ct);
 
-        // Kural 2: sipariş durumu da state machine üzerinden ilerler.
-        stateMachine.Transition(ticket.Order, OrderStatus.Redeemed);
+        // Sipariş ancak TÜM biletleri kullanıldığında Redeemed olur.
+        // 2 su + 1 köpük siparişinde ilk okutma siparişi kapatmamalı.
+        var allRedeemed = ticket.Order.Tickets.All(t => t.Status == TicketStatus.Redeemed);
+
+        if (allRedeemed && OrderStateMachine.CanTransition(ticket.Order.Status, OrderStatus.Redeemed))
+        {
+            // Kural 2: sipariş durumu state machine üzerinden ilerler.
+            stateMachine.Transition(ticket.Order, OrderStatus.Redeemed);
+        }
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
@@ -85,6 +92,6 @@ public class TicketService(
             "Bilet kullanıldı. Bilet {TicketId}, sipariş {OrderId}, personel {StaffId}",
             ticket.Id, ticket.OrderId, staffUserId);
 
-        return new RedeemResult(RedeemOutcome.Redeemed, ticket, ticket.Order.Service.Name);
+        return new RedeemResult(RedeemOutcome.Redeemed, ticket, ticket.ServiceName);
     }
 }

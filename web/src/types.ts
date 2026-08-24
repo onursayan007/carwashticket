@@ -3,7 +3,7 @@ import type { components } from '@/api/types'
 type Schemas = components['schemas']
 
 // Backend'de Identity rolü düz string; uygulamada dar tutuyoruz.
-export type Role = 'Customer' | 'Staff' | 'Manager'
+export type Role = 'Customer' | 'Scanner' | 'Business' | 'Admin'
 
 export type LoginRequest = Schemas['LoginRequest']
 export type RegisterRequest = Schemas['RegisterRequest']
@@ -48,6 +48,10 @@ export type PanelServiceDto = Omit<Required<Schemas['PanelServiceDto']>, 'descri
 }
 
 export type UpsertServiceRequest = Schemas['UpsertServiceRequest']
+
+export type ServiceKind = Schemas['ServiceKind']
+
+export type OrderItemRequest = Required<Schemas['OrderItemRequest']>
 
 export type RedeemTicketRequest = Required<Schemas['RedeemTicketRequest']>
 

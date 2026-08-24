@@ -21,6 +21,11 @@ public class TestWorld(ApiFactory factory)
         {
             Id = Guid.NewGuid(),
             Name = $"İstasyon {Guid.NewGuid():N}"[..20],
+            Type = StationType.SelfService,
+            City = "Antalya",
+            District = "Elmalı",
+            Latitude = 36.7387,
+            Longitude = 29.9075,
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -29,7 +34,8 @@ public class TestWorld(ApiFactory factory)
         {
             Id = Guid.NewGuid(),
             StationId = station.Id,
-            Name = "Dış Yıkama",
+            Name = "Su",
+            Kind = ServiceKind.Unit,
             Price = price,
             DurationMinutes = 20,
             IsActive = true,
@@ -41,6 +47,29 @@ public class TestWorld(ApiFactory factory)
         await db.SaveChangesAsync();
 
         return (station.Id, service.Id);
+    }
+
+    public async Task<Guid> AddServiceAsync(Guid stationId, string name, decimal price)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var service = new Service
+        {
+            Id = Guid.NewGuid(),
+            StationId = stationId,
+            Name = name,
+            Kind = ServiceKind.Unit,
+            Price = price,
+            DurationMinutes = 5,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        db.Services.Add(service);
+        await db.SaveChangesAsync();
+
+        return service.Id;
     }
 
     // Rolü verilen bir kullanıcı yaratır, istasyon verilirse oraya atar,
@@ -86,7 +115,7 @@ public class TestWorld(ApiFactory factory)
                 {
                     StationId = stationId.Value,
                     UserId = user.Id,
-                    Role = role == "Manager" ? StationRole.Manager : StationRole.Staff,
+                    Role = role == Roles.Business ? StationRole.Business : StationRole.Scanner,
                     AssignedAt = DateTimeOffset.UtcNow
                 });
 

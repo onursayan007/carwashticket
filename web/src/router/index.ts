@@ -47,13 +47,13 @@ const routes: RouteRecordRaw[] = [
     path: '/scan',
     name: 'scan',
     component: () => import('@/views/ScannerView.vue'),
-    meta: { roles: ['Staff'] },
+    meta: { roles: ['Scanner'] },
   },
   {
     path: '/manage',
     name: 'manage',
     component: () => import('@/views/PanelView.vue'),
-    meta: { roles: ['Manager'] },
+    meta: { roles: ['Business'] },
   },
   {
     path: '/forbidden',
@@ -69,8 +69,8 @@ const routes: RouteRecordRaw[] = [
 
 // Rol başına açılış ekranı. Birden fazla rolü olana en yetkilisi verilir.
 export function homeRouteFor(roles: readonly Role[]): RouteLocationRaw {
-  if (roles.includes('Manager')) return { name: 'manage' }
-  if (roles.includes('Staff')) return { name: 'scan' }
+  if (roles.includes('Business')) return { name: 'manage' }
+  if (roles.includes('Scanner')) return { name: 'scan' }
   if (roles.includes('Customer')) return { name: 'stations' }
 
   return { name: 'forbidden' }

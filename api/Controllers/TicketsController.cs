@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Dtos;
+using CarWashTicket.Api.Entities;
 using CarWashTicket.Api.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ public class TicketsController(AppDbContext db, TicketService ticketService) : C
 {
     // Müşterinin kendi biletleri, yenisi üstte.
     [HttpGet]
-    [Authorize(Roles = "Customer")]
+    [Authorize(Roles = Roles.Customer)]
     [Produces("application/json")]
     [ProducesResponseType<IReadOnlyList<TicketListItemDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<TicketListItemDto>>> GetMine(CancellationToken ct)
@@ -30,7 +31,7 @@ public class TicketsController(AppDbContext db, TicketService ticketService) : C
                 t.Id,
                 t.Code,
                 t.Status,
-                t.Order.Service.Name,
+                t.ServiceName,
                 t.Station.Name,
                 t.Order.Amount,
                 t.IssuedAt,
@@ -42,7 +43,7 @@ public class TicketsController(AppDbContext db, TicketService ticketService) : C
     }
 
     [HttpPost("redeem")]
-    [Authorize(Roles = "Staff")]
+    [Authorize(Roles = Roles.Scanner)]
     [Produces("application/json")]
     [ProducesResponseType<RedeemTicketResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RedeemTicketResponse>> Redeem(
@@ -67,7 +68,7 @@ public class TicketsController(AppDbContext db, TicketService ticketService) : C
 
     // QR görseli sadece bileti satın alan müşteriye verilir.
     [HttpGet("{id:guid}/qr")]
-    [Authorize(Roles = "Customer")]
+    [Authorize(Roles = Roles.Customer)]
     [Produces("image/png")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

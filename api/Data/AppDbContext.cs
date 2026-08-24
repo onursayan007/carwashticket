@@ -18,6 +18,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -31,8 +33,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         builder.Entity<Station>(e =>
         {
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.City).HasMaxLength(100);
+            e.Property(x => x.District).HasMaxLength(100);
+            e.Property(x => x.CompanyName).HasMaxLength(300);
+            e.Property(x => x.TaxNumber).HasMaxLength(20);
+            e.Property(x => x.TaxOffice).HasMaxLength(150);
+            e.Property(x => x.ContactEmail).HasMaxLength(256);
             e.Property(x => x.PhoneNumber).HasMaxLength(30);
+            e.Property(x => x.RatingAverage).HasPrecision(3, 2);
+
+            // Haritada görünen işyerlerini bir kutu içinde çekmek için.
+            e.HasIndex(x => new { x.IsActive, x.Latitude, x.Longitude });
         });
 
         builder.Entity<StationStaff>(e =>
@@ -58,6 +71,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
             e.Property(x => x.Description).HasMaxLength(1000);
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.Price).HasPrecision(18, 2);
 
             e.HasOne(x => x.Station)
@@ -66,6 +80,50 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                 .OnDelete(DeleteBehavior.Restrict);
 
             e.HasIndex(x => new { x.StationId, x.IsActive });
+        });
+
+        builder.Entity<OrderItem>(e =>
+        {
+            e.Property(x => x.ServiceName).IsRequired().HasMaxLength(200);
+            e.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            e.Property(x => x.LineTotal).HasPrecision(18, 2);
+
+            e.HasOne(x => x.Order)
+                .WithMany(o => o.Items)
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Service)
+                .WithMany()
+                .HasForeignKey(x => x.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(x => x.OrderId);
+        });
+
+        builder.Entity<Review>(e =>
+        {
+            e.Property(x => x.Comment).HasMaxLength(1000);
+
+            // Sipariş başına tek değerlendirme.
+            e.HasIndex(x => x.OrderId).IsUnique();
+
+            e.HasOne(x => x.Station)
+                .WithMany()
+                .HasForeignKey(x => x.StationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(x => x.Order)
+                .WithMany()
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(x => x.Customer)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(x => x.StationId);
         });
 
         builder.Entity<Order>(e =>
@@ -91,11 +149,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                 .HasForeignKey(x => x.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasOne(x => x.Service)
-                .WithMany()
-                .HasForeignKey(x => x.ServiceId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             e.HasIndex(x => new { x.StationId, x.Status });
             e.HasIndex(x => new { x.StationId, x.CreatedAt });
             e.HasIndex(x => x.CustomerId);
@@ -105,16 +158,24 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         builder.Entity<Ticket>(e =>
         {
             e.Property(x => x.Code).IsRequired().HasMaxLength(64);
+            e.Property(x => x.ServiceName).IsRequired().HasMaxLength(200);
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
 
             // QR kodu sistem genelinde tekil.
             e.HasIndex(x => x.Code).IsUnique();
 
-            // Bir siparişe en fazla bir bilet.
+            // Bir siparişte satın alınan her birim için ayrı bilet.
             e.HasOne(x => x.Order)
-                .WithOne(o => o.Ticket)
-                .HasForeignKey<Ticket>(x => x.OrderId)
+                .WithMany(o => o.Tickets)
+                .HasForeignKey(x => x.OrderId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(x => x.Service)
+                .WithMany()
+                .HasForeignKey(x => x.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(x => x.OrderId);
 
             e.HasOne(x => x.Station)
                 .WithMany()

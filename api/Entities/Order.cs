@@ -1,6 +1,7 @@
 namespace CarWashTicket.Api.Entities;
 
-// Müşterinin bir hizmet için verdiği sipariş.
+// Müşterinin bir veya birden fazla kalem için verdiği sipariş.
+// Örn. 2 su + 1 köpük tek siparişte, iki kalem olarak durur.
 public class Order
 {
     public Guid Id { get; set; }
@@ -9,13 +10,11 @@ public class Order
 
     public Guid CustomerId { get; set; }
 
-    public Guid ServiceId { get; set; }
-
-    // Satış anındaki fiyatın kopyası. Hizmet fiyatı değişse de bu sabit kalır.
+    // Kalemlerin toplamı. Satış anında sabitlenir.
     public decimal Amount { get; set; }
 
     // Sipariş anındaki orana göre hesaplanır; oran sonradan değişse de sabit kalır.
-    // İstasyonun hakedişi = Amount - CommissionAmount.
+    // İşyerinin hakedişi = Amount - CommissionAmount.
     public decimal CommissionAmount { get; set; }
 
     // Setter private: kimse doğrudan yazamaz. Değişiklik OrderStateMachine'den geçer.
@@ -41,9 +40,10 @@ public class Order
 
     public ApplicationUser Customer { get; set; } = null!;
 
-    public Service Service { get; set; } = null!;
+    public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 
-    public Ticket? Ticket { get; set; }
+    // Her satın alınan birim için bir bilet üretilir: 2 su + 1 köpük -> 3 bilet.
+    public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 
     // Sadece OrderStateMachine çağırır. Kuralları o doğrular, burası sadece yazar.
     internal void ApplyStatus(OrderStatus next) => Status = next;

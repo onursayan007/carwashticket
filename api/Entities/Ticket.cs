@@ -1,6 +1,7 @@
 namespace CarWashTicket.Api.Entities;
 
-// Ödemesi tamamlanan siparişin QR bileti. Bir siparişe en fazla bir bilet.
+// Satın alınan her birim için bir bilet. Tek kullanımlık.
+// 2 su + 1 köpük siparişi 3 bilet üretir.
 public class Ticket
 {
     public Guid Id { get; set; }
@@ -8,6 +9,11 @@ public class Ticket
     public Guid OrderId { get; set; }
 
     public Guid StationId { get; set; }
+
+    // Biletin hangi hizmeti verdiği: su mu, köpük mü, paket mi.
+    public Guid ServiceId { get; set; }
+
+    public string ServiceName { get; set; } = null!;
 
     // QR içine gömülen kod.
     public string Code { get; set; } = null!;
@@ -26,6 +32,8 @@ public class Ticket
     public Order Order { get; set; } = null!;
 
     public Station Station { get; set; } = null!;
+
+    public Service Service { get; set; } = null!;
 
     public ApplicationUser? RedeemedByUser { get; set; }
 }

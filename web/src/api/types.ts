@@ -728,8 +728,7 @@ export interface components {
         CreateOrderRequest: {
             /** Format: uuid */
             stationId: string;
-            /** Format: uuid */
-            serviceId: string;
+            items: components["schemas"]["OrderItemRequest"][];
         };
         CreateOrderResponse: {
             /** Format: uuid */
@@ -743,6 +742,12 @@ export interface components {
             /** Format: email */
             email: string;
             password: string;
+        };
+        OrderItemRequest: {
+            /** Format: uuid */
+            serviceId: string;
+            /** Format: int32 */
+            quantity?: number;
         };
         /** @enum {string} */
         OrderStatus: "Created" | "AwaitingPayment" | "Paid" | "Redeemed" | "Settled" | "Failed" | "Expired" | "Refunded";
@@ -758,7 +763,7 @@ export interface components {
             id?: string;
             /** Format: date-time */
             createdAt?: string;
-            serviceName?: string;
+            itemSummary?: string;
             /** Format: double */
             amount?: number;
             /** Format: double */
@@ -770,6 +775,7 @@ export interface components {
             id?: string;
             name?: string;
             description?: string | null;
+            kind?: components["schemas"]["ServiceKind"];
             /** Format: double */
             price?: number;
             /** Format: int32 */
@@ -828,6 +834,8 @@ export interface components {
             /** Format: int32 */
             durationMinutes?: number;
         };
+        /** @enum {string} */
+        ServiceKind: "Unit" | "Package";
         StationDetailDto: {
             /** Format: uuid */
             id?: string;
@@ -864,6 +872,7 @@ export interface components {
         UpsertServiceRequest: {
             name: string;
             description?: string | null;
+            kind?: components["schemas"]["ServiceKind"];
             /** Format: double */
             price?: number;
             /** Format: int32 */

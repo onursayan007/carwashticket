@@ -40,7 +40,7 @@ const savingService = ref(false)
 const serviceError = ref<string | null>(null)
 
 function emptyForm(): UpsertServiceRequest {
-  return { name: '', description: null, price: 0, durationMinutes: 15, isActive: true }
+  return { name: '', description: null, kind: 'Unit', price: 0, durationMinutes: 15, isActive: true }
 }
 
 function rangeQuery(): string {
@@ -85,6 +85,7 @@ function startEdit(service: PanelServiceDto) {
   form.value = {
     name: service.name,
     description: service.description,
+    kind: service.kind,
     price: service.price,
     durationMinutes: service.durationMinutes,
     isActive: service.isActive,
@@ -229,7 +230,7 @@ onMounted(async () => {
                 <td class="whitespace-nowrap px-4 py-2 text-slate-500">
                   {{ dateTime.format(new Date(order.createdAt)) }}
                 </td>
-                <td class="px-4 py-2 text-slate-900">{{ order.serviceName }}</td>
+                <td class="px-4 py-2 text-slate-900">{{ order.itemSummary }}</td>
                 <td class="px-4 py-2 text-slate-500">{{ order.status }}</td>
                 <td class="whitespace-nowrap px-4 py-2 text-right text-slate-900">
                   {{ money.format(order.amount) }}
