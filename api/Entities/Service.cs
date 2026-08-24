@@ -13,6 +13,9 @@ public class Service
 
     public decimal Price { get; set; }
 
+    // Yıkamanın tahmini süresi.
+    public int DurationMinutes { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTimeOffset CreatedAt { get; set; }
