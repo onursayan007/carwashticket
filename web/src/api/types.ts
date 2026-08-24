@@ -523,7 +523,13 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    lat?: number;
+                    lng?: number;
+                    sort?: components["schemas"]["StationSort"];
+                    radiusKm?: number;
+                    limit?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -536,7 +542,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["StationListItemDto"][];
+                        "application/json": components["schemas"]["StationSummaryDto"][];
                     };
                 };
             };
@@ -829,6 +835,7 @@ export interface components {
             id?: string;
             name?: string;
             description?: string | null;
+            kind?: components["schemas"]["ServiceKind"];
             /** Format: double */
             price?: number;
             /** Format: int32 */
@@ -840,17 +847,46 @@ export interface components {
             /** Format: uuid */
             id?: string;
             name?: string;
+            type?: components["schemas"]["StationType"];
             address?: string | null;
+            city?: string | null;
+            district?: string | null;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
             phoneNumber?: string | null;
+            /** Format: double */
+            ratingAverage?: number;
+            /** Format: int32 */
+            ratingCount?: number;
             services?: components["schemas"]["ServiceDto"][];
         };
-        StationListItemDto: {
+        /** @enum {string} */
+        StationSort: "Nearest" | "Cheapest" | "TopRated" | "Best";
+        StationSummaryDto: {
             /** Format: uuid */
             id?: string;
             name?: string;
+            type?: components["schemas"]["StationType"];
             address?: string | null;
-            phoneNumber?: string | null;
+            city?: string | null;
+            district?: string | null;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: double */
+            ratingAverage?: number;
+            /** Format: int32 */
+            ratingCount?: number;
+            /** Format: double */
+            minPrice?: number | null;
+            /** Format: double */
+            distanceKm?: number | null;
         };
+        /** @enum {string} */
+        StationType: "SelfService" | "FullService" | "Both";
         TicketListItemDto: {
             /** Format: uuid */
             id?: string;

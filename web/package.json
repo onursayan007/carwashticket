@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",
+    "maplibre-gl": "^6.6.0",
     "ofetch": "^1.4.1",
     "pinia": "^3.0.1",
     "qrcode.vue": "^3.10.0",

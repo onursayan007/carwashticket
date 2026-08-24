@@ -16,7 +16,20 @@ export type AuthResponse = Omit<Required<Schemas['AuthResponse']>, 'user'> & { u
 
 export type ServiceDto = Required<Schemas['ServiceDto']>
 
-export type StationListItemDto = Required<Schemas['StationListItemDto']>
+export type StationSort = Schemas['StationSort']
+
+export type StationType = Schemas['StationType']
+
+export type StationSummaryDto = Omit<
+  Required<Schemas['StationSummaryDto']>,
+  'address' | 'city' | 'district' | 'minPrice' | 'distanceKm'
+> & {
+  address: string | null
+  city: string | null
+  district: string | null
+  minPrice: number | null
+  distanceKm: number | null
+}
 
 export type StationDetailDto = Omit<Required<Schemas['StationDetailDto']>, 'services'> & {
   services: ServiceDto[]

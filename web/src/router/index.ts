@@ -21,7 +21,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'stations',
-    component: () => import('@/views/StationsView.vue'),
+    component: () => import('@/views/DiscoverView.vue'),
     meta: { roles: ['Customer'] },
   },
   {

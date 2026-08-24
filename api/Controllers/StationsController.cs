@@ -1,5 +1,6 @@
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Dtos;
+using CarWashTicket.Api.Stations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,26 +11,33 @@ namespace CarWashTicket.Api.Controllers;
 [Route("api/stations")]
 [Produces("application/json")]
 [Authorize]
-public class StationsController(AppDbContext db) : ControllerBase
+public class StationsController(AppDbContext db, StationQueryService stations) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<StationListItemDto>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<StationListItemDto>>> GetAll()
+    [ProducesResponseType<IReadOnlyList<StationSummaryDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<StationSummaryDto>>> Search(
+        [FromQuery] double? lat,
+        [FromQuery] double? lng,
+        [FromQuery] StationSort sort = StationSort.Best,
+        [FromQuery] double radiusKm = 50,
+        [FromQuery] int limit = 50,
+        CancellationToken ct = default)
     {
-        var stations = await db.Stations
-            .AsNoTracking()
-            .Where(s => s.IsActive)
-            .OrderBy(s => s.Name)
-            .Select(s => new StationListItemDto(s.Id, s.Name, s.Address, s.PhoneNumber))
-            .ToListAsync();
+        var results = await stations.SearchAsync(
+            lat,
+            lng,
+            sort,
+            Math.Clamp(radiusKm, 1, 500),
+            Math.Clamp(limit, 1, 200),
+            ct);
 
-        return Ok(stations);
+        return Ok(results);
     }
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType<StationDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<StationDetailDto>> GetById(Guid id)
+    public async Task<ActionResult<StationDetailDto>> GetById(Guid id, CancellationToken ct)
     {
         var station = await db.Stations
             .AsNoTracking()
@@ -37,8 +45,15 @@ public class StationsController(AppDbContext db) : ControllerBase
             .Select(s => new StationDetailDto(
                 s.Id,
                 s.Name,
+                s.Type,
                 s.Address,
+                s.City,
+                s.District,
+                s.Latitude,
+                s.Longitude,
                 s.PhoneNumber,
+                s.RatingAverage,
+                s.RatingCount,
                 s.Services
                     .Where(x => x.IsActive)
                     .OrderBy(x => x.Price)
@@ -46,10 +61,11 @@ public class StationsController(AppDbContext db) : ControllerBase
                         x.Id,
                         x.Name,
                         x.Description,
+                        x.Kind,
                         x.Price,
                         x.DurationMinutes))
                     .ToList()))
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (station is null)
         {
