@@ -71,9 +71,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         builder.Entity<Order>(e =>
         {
             e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.CommissionAmount).HasPrecision(18, 2);
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.IdempotencyKey).IsRequired().HasMaxLength(64);
             e.Property(x => x.ProviderPaymentId).HasMaxLength(128);
+            e.Property(x => x.CheckoutRedirectUrl).HasMaxLength(2048);
             e.Property(x => x.FailureReason).HasMaxLength(500);
 
             // Aynı istek iki kez sipariş oluşturamaz.

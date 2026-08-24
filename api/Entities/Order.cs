@@ -14,11 +14,19 @@ public class Order
     // Satış anındaki fiyatın kopyası. Hizmet fiyatı değişse de bu sabit kalır.
     public decimal Amount { get; set; }
 
-    public OrderStatus Status { get; set; }
+    // Sipariş anındaki orana göre hesaplanır; oran sonradan değişse de sabit kalır.
+    // İstasyonun hakedişi = Amount - CommissionAmount.
+    public decimal CommissionAmount { get; set; }
+
+    // Setter private: kimse doğrudan yazamaz. Değişiklik OrderStateMachine'den geçer.
+    public OrderStatus Status { get; private set; }
 
     public string IdempotencyKey { get; set; } = null!;
 
     public string? ProviderPaymentId { get; set; }
+
+    // Aynı Idempotency-Key ile gelen tekrar isteğe birebir aynı yanıtı dönebilmek için saklanır.
+    public string? CheckoutRedirectUrl { get; set; }
 
     public string? FailureReason { get; set; }
 
@@ -36,4 +44,7 @@ public class Order
     public Service Service { get; set; } = null!;
 
     public Ticket? Ticket { get; set; }
+
+    // Sadece OrderStateMachine çağırır. Kuralları o doğrular, burası sadece yazar.
+    internal void ApplyStatus(OrderStatus next) => Status = next;
 }
