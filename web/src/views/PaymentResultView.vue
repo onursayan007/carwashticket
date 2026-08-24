@@ -118,8 +118,16 @@ onUnmounted(() => {
       </template>
 
       <RouterLink
-        :to="{ name: 'stations' }"
+        v-if="phase === 'success'"
+        :to="{ name: 'wallet' }"
         class="block rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800"
+      >
+        Biletimi göster
+      </RouterLink>
+
+      <RouterLink
+        :to="{ name: 'stations' }"
+        class="block rounded-lg px-4 py-2 font-medium text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50"
       >
         İstasyonlara dön
       </RouterLink>

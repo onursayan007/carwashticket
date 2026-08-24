@@ -32,3 +32,19 @@ export type CreateOrderResponse = Omit<Required<Schemas['CreateOrderResponse']>,
 }
 
 export type OrderStatusResponse = Required<Schemas['OrderStatusResponse']>
+
+export type TicketStatus = Schemas['TicketStatus']
+
+export type TicketListItemDto = Omit<Required<Schemas['TicketListItemDto']>, 'redeemedAt'> & {
+  redeemedAt: string | null
+}
+
+export type RedeemTicketRequest = Required<Schemas['RedeemTicketRequest']>
+
+export type RedeemTicketResponse = Omit<
+  Required<Schemas['RedeemTicketResponse']>,
+  'serviceName' | 'redeemedAt'
+> & {
+  serviceName: string | null
+  redeemedAt: string | null
+}

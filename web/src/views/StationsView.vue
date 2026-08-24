@@ -32,13 +32,21 @@ function onLogout() {
   <main class="min-h-screen bg-slate-50">
     <header class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
       <h1 class="text-lg font-semibold text-slate-900">İstasyonlar</h1>
-      <button
-        type="button"
-        class="text-sm text-slate-500 hover:text-slate-900"
-        @click="onLogout"
-      >
-        Çıkış
-      </button>
+      <div class="flex items-center gap-4">
+        <RouterLink
+          :to="{ name: 'wallet' }"
+          class="text-sm text-slate-500 hover:text-slate-900"
+        >
+          Biletlerim
+        </RouterLink>
+        <button
+          type="button"
+          class="text-sm text-slate-500 hover:text-slate-900"
+          @click="onLogout"
+        >
+          Çıkış
+        </button>
+      </div>
     </header>
 
     <div class="mx-auto max-w-2xl p-4">

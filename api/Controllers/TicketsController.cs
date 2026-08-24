@@ -13,6 +13,34 @@ namespace CarWashTicket.Api.Controllers;
 [Authorize]
 public class TicketsController(AppDbContext db, TicketService ticketService) : ControllerBase
 {
+    // Müşterinin kendi biletleri, yenisi üstte.
+    [HttpGet]
+    [Authorize(Roles = "Customer")]
+    [Produces("application/json")]
+    [ProducesResponseType<IReadOnlyList<TicketListItemDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TicketListItemDto>>> GetMine(CancellationToken ct)
+    {
+        var customerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var tickets = await db.Tickets
+            .AsNoTracking()
+            .Where(t => t.Order.CustomerId == customerId)
+            .OrderByDescending(t => t.IssuedAt)
+            .Select(t => new TicketListItemDto(
+                t.Id,
+                t.Code,
+                t.Status,
+                t.Order.Service.Name,
+                t.Station.Name,
+                t.Order.Amount,
+                t.IssuedAt,
+                t.ExpiresAt,
+                t.RedeemedAt))
+            .ToListAsync(ct);
+
+        return Ok(tickets);
+    }
+
     [HttpPost("redeem")]
     [Authorize(Roles = "Staff")]
     [Produces("application/json")]

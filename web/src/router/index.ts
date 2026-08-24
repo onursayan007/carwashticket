@@ -38,9 +38,15 @@ const routes: RouteRecordRaw[] = [
     meta: { roles: ['Customer'] },
   },
   {
+    path: '/biletlerim',
+    name: 'wallet',
+    component: () => import('@/views/WalletView.vue'),
+    meta: { roles: ['Customer'] },
+  },
+  {
     path: '/scan',
     name: 'scan',
-    component: () => import('@/views/ScanView.vue'),
+    component: () => import('@/views/ScannerView.vue'),
     meta: { roles: ['Staff'] },
   },
   {
