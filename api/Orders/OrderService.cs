@@ -1,6 +1,8 @@
+using System.Security.Cryptography;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Dtos;
 using CarWashTicket.Api.Entities;
+using CarWashTicket.Api.Ledger;
 using CarWashTicket.Api.Payments;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -22,10 +24,21 @@ public record OrderCreationResult(
     CreateOrderResponse? Response,
     string? Error);
 
+public enum PaymentConfirmationOutcome
+{
+    Confirmed,
+    // Sipariş zaten ödenmiş; tekrar gelen bildirim sessizce yutuluyor.
+    AlreadyConfirmed,
+    OrderNotFound,
+    AmountMismatch,
+    InvalidState
+}
+
 public class OrderService(
     AppDbContext db,
     IPaymentProvider paymentProvider,
     OrderStateMachine stateMachine,
+    LedgerService ledger,
     IConfiguration configuration,
     ILogger<OrderService> logger)
 {
@@ -141,6 +154,96 @@ public class OrderService(
 
         return new OrderCreationResult(OrderCreationOutcome.Created, ToResponse(order), null);
     }
+
+    // Ödemeyi kesinleştirir: durum Paid'e geçer, bilet üretilir, defter kayıtları
+    // yazılır. Üçü tek SaveChanges ile, yani tek transaction'da commit edilir.
+    public async Task<PaymentConfirmationOutcome> ConfirmPaymentAsync(
+        Guid orderId,
+        string? providerPaymentId,
+        decimal? paidAmount,
+        CancellationToken ct = default)
+    {
+        var order = await db.Orders
+            .Include(o => o.Ticket)
+            .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+        if (order is null)
+        {
+            return PaymentConfirmationOutcome.OrderNotFound;
+        }
+
+        if (order.Status is OrderStatus.Paid or OrderStatus.Redeemed or OrderStatus.Settled)
+        {
+            return PaymentConfirmationOutcome.AlreadyConfirmed;
+        }
+
+        if (!OrderStateMachine.CanTransition(order.Status, OrderStatus.Paid))
+        {
+            logger.LogWarning(
+                "Ödeme onayı reddedildi, sipariş {OrderId} durumu: {Status}", orderId, order.Status);
+
+            return PaymentConfirmationOutcome.InvalidState;
+        }
+
+        // Sağlayıcı tutar bildirdiyse siparişteki tutarla birebir eşleşmeli.
+        if (paidAmount.HasValue && paidAmount.Value != order.Amount)
+        {
+            logger.LogError(
+                "Tutar uyuşmuyor. Sipariş {OrderId}: beklenen {Expected}, gelen {Received}",
+                orderId, order.Amount, paidAmount.Value);
+
+            return PaymentConfirmationOutcome.AmountMismatch;
+        }
+
+        stateMachine.Transition(order, OrderStatus.Paid);
+
+        if (providerPaymentId is not null)
+        {
+            order.ProviderPaymentId = providerPaymentId;
+        }
+
+        db.Tickets.Add(BuildTicket(order));
+        ledger.AddPaymentEntries(order);
+
+        await db.SaveChangesAsync(ct);
+
+        return PaymentConfirmationOutcome.Confirmed;
+    }
+
+    public async Task MarkPaymentFailedAsync(Guid orderId, string? reason, CancellationToken ct = default)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+        if (order is null || !OrderStateMachine.CanTransition(order.Status, OrderStatus.Failed))
+        {
+            return;
+        }
+
+        stateMachine.Transition(order, OrderStatus.Failed);
+        order.FailureReason = reason;
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    private Ticket BuildTicket(Order order)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        return new Ticket
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            StationId = order.StationId,
+            Code = GenerateTicketCode(),
+            Status = TicketStatus.Issued,
+            IssuedAt = now,
+            ExpiresAt = now.AddDays(configuration.GetValue("Ticket:ValidDays", 30))
+        };
+    }
+
+    // Tahmin edilemez olmalı: sıralı veya kısa kod üretilirse başkasının bileti denenebilir.
+    private static string GenerateTicketCode()
+        => Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
 
     private Task<Order?> FindByKeyAsync(string idempotencyKey, CancellationToken ct)
         => db.Orders.FirstOrDefaultAsync(o => o.IdempotencyKey == idempotencyKey, ct);

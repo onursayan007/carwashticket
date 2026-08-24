@@ -16,4 +16,8 @@ public interface IPaymentProvider
 
     // Webhook gövdesinin gerçekten sağlayıcıdan geldiğini doğrular.
     bool VerifyWebhook(string payload, IReadOnlyDictionary<string, string> headers);
+
+    // Sağlayıcıya özgü webhook gövdesini ortak özete çevirir.
+    // Okunamayan gövde için null döner.
+    WebhookNotification? ParseWebhook(string payload);
 }

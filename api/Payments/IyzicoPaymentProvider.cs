@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Iyzipay;
 using Iyzipay.Model;
 using Iyzipay.Request;
@@ -198,6 +199,65 @@ public class IyzicoPaymentProvider(
         }
 
         return matches;
+    }
+
+    // DİKKAT: alan adları sağlayıcı dokümanından teyit edilmeli.
+    // Sipariş kimliğini paymentConversationId'den okuyoruz; StartCheckout'ta
+    // ConversationId olarak sipariş kimliğini gönderiyoruz.
+    public WebhookNotification? ParseWebhook(string payload)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            var root = document.RootElement;
+
+            if (!TryGetString(root, "paymentConversationId", out var rawOrderId)
+                || !Guid.TryParse(rawOrderId, out var orderId))
+            {
+                logger.LogWarning("Webhook gövdesinde sipariş kimliği yok.");
+                return null;
+            }
+
+            TryGetString(root, "iyziReferenceCode", out var referenceCode);
+            TryGetString(root, "iyziEventType", out var eventType);
+            TryGetString(root, "iyziPaymentId", out var paymentId);
+            TryGetString(root, "status", out var status);
+
+            if (string.IsNullOrWhiteSpace(referenceCode))
+            {
+                // Tekrar gelen bildirimi eleyecek kimlik yoksa kaydı kabul etmiyoruz.
+                logger.LogWarning("Webhook gövdesinde olay kimliği yok. Sipariş {OrderId}", orderId);
+                return null;
+            }
+
+            return new WebhookNotification(
+                referenceCode,
+                eventType ?? "unknown",
+                orderId,
+                paymentId,
+                // Tutar gövdede gelmiyor; doğrulama sipariş kaydındaki tutara göre yapılır.
+                null,
+                MapStatus(status));
+        }
+        catch (JsonException ex)
+        {
+            logger.LogWarning(ex, "Webhook gövdesi okunamadı.");
+            return null;
+        }
+    }
+
+    private static WebhookPaymentStatus MapStatus(string? status) => status?.ToUpperInvariant() switch
+    {
+        "SUCCESS" => WebhookPaymentStatus.Succeeded,
+        "FAILURE" or "FAILED" => WebhookPaymentStatus.Failed,
+        _ => WebhookPaymentStatus.Ignored
+    };
+
+    private static bool TryGetString(JsonElement root, string name, out string? value)
+    {
+        value = root.TryGetProperty(name, out var element) ? element.ToString() : null;
+
+        return !string.IsNullOrWhiteSpace(value);
     }
 
     // --- Sözleşmede olmayan alanlar için geçici değerler ---

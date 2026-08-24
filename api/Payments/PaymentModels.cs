@@ -35,6 +35,23 @@ public record CallbackResult(
         => new(false, orderId, null, null, errorMessage);
 }
 
+public enum WebhookPaymentStatus
+{
+    Succeeded,
+    Failed,
+    // İlgilenmediğimiz bir bildirim; kaydedilir ama siparişe dokunulmaz.
+    Ignored
+}
+
+// Sağlayıcının webhook gövdesinden çıkarılan, sağlayıcıdan bağımsız özet.
+public record WebhookNotification(
+    string ProviderEventId,
+    string EventType,
+    Guid OrderId,
+    string? ProviderPaymentId,
+    decimal? PaidAmount,
+    WebhookPaymentStatus Status);
+
 public record RefundRequest(
     string ProviderPaymentId,
     decimal Amount,
