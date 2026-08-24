@@ -1,25 +1,23 @@
+import type { components } from '@/api/types'
+
+type Schemas = components['schemas']
+
+// Backend'de Identity rolü düz string; uygulamada dar tutuyoruz.
 export type Role = 'Customer' | 'Staff' | 'Manager'
 
-export interface UserDto {
-  id: string
-  email: string
-  fullName: string | null
-  roles: Role[]
-}
+export type LoginRequest = Schemas['LoginRequest']
+export type RegisterRequest = Schemas['RegisterRequest']
 
-export interface AuthResponse {
-  accessToken: string
-  expiresAt: string
-  user: UserDto
-}
+// Swashbuckle yanıt alanlarını optional üretiyor ama sunucu hepsini her zaman
+// gönderiyor; Required ile daraltıp kullanım tarafında gereksiz kontrolden kurtuluyoruz.
+export type UserDto = Omit<Required<Schemas['UserDto']>, 'roles'> & { roles: Role[] }
 
-export interface LoginRequest {
-  email: string
-  password: string
-}
+export type AuthResponse = Omit<Required<Schemas['AuthResponse']>, 'user'> & { user: UserDto }
 
-export interface RegisterRequest {
-  email: string
-  password: string
-  fullName?: string
+export type ServiceDto = Required<Schemas['ServiceDto']>
+
+export type StationListItemDto = Required<Schemas['StationListItemDto']>
+
+export type StationDetailDto = Omit<Required<Schemas['StationDetailDto']>, 'services'> & {
+  services: ServiceDto[]
 }

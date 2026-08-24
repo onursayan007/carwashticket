@@ -87,6 +87,9 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "CarWashTicket API", Version = "v1" });
 
+    // Nullable olmayan alanlar şemada required görünsün; üretilen TS tipleri optional olmasın.
+    options.SupportNonNullableReferenceTypes();
+
     var scheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
