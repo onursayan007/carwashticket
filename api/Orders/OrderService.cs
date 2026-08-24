@@ -1,9 +1,9 @@
-using System.Security.Cryptography;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Dtos;
 using CarWashTicket.Api.Entities;
 using CarWashTicket.Api.Ledger;
 using CarWashTicket.Api.Payments;
+using CarWashTicket.Api.Tickets;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -245,16 +245,12 @@ public class OrderService(
             Id = Guid.NewGuid(),
             OrderId = order.Id,
             StationId = order.StationId,
-            Code = GenerateTicketCode(),
+            Code = TicketService.GenerateCode(),
             Status = TicketStatus.Issued,
             IssuedAt = now,
             ExpiresAt = now.AddDays(configuration.GetValue("Ticket:ValidDays", 30))
         };
     }
-
-    // Tahmin edilemez olmalı: sıralı veya kısa kod üretilirse başkasının bileti denenebilir.
-    private static string GenerateTicketCode()
-        => Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
 
     private Task<Order?> FindByKeyAsync(string idempotencyKey, CancellationToken ct)
         => db.Orders.FirstOrDefaultAsync(o => o.IdempotencyKey == idempotencyKey, ct);

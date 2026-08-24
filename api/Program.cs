@@ -7,6 +7,7 @@ using CarWashTicket.Api.Ledger;
 using CarWashTicket.Api.Orders;
 using CarWashTicket.Api.Payments;
 using CarWashTicket.Api.Services;
+using CarWashTicket.Api.Tickets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -124,6 +125,7 @@ builder.Services.AddPaymentProvider(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<OrderStateMachine>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<LedgerService>();
+builder.Services.AddScoped<TicketService>();
 
 var app = builder.Build();
 
