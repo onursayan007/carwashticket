@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Entities;
+using CarWashTicket.Api.Ledger;
 using CarWashTicket.Api.Orders;
 using CarWashTicket.Api.Payments;
 using CarWashTicket.Api.Services;
@@ -118,6 +119,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddPaymentProvider(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<OrderStateMachine>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<LedgerService>();
 
 var app = builder.Build();
 
