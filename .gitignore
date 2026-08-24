@@ -1,2 +1,18 @@
+# macOS
 ._*
 .DS_Store
+
+# .NET
+bin/
+obj/
+*.user
+
+# Node / Vue
+node_modules/
+dist/
+
+# Ortam dosyaları (gizli bilgi içerir)
+.env
+.env.*
+appsettings.Development.json
+appsettings.Local.json
