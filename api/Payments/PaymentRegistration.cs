@@ -17,10 +17,6 @@ public static class PaymentRegistration
             return services;
         }
 
-        // Gerçek sağlayıcı henüz yazılmadı. Sessizce mock'a düşmek yerine
-        // ayağa kalkarken patlaması daha güvenli.
-        throw new InvalidOperationException(
-            "Gerçek ödeme sağlayıcısı henüz kayıtlı değil. "
-            + "Geliştirme için Payment:UseMock = true yapın.");
+        return services.AddRealPaymentProvider();
     }
 }
