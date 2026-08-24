@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl'
+import { Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// maplibre worker'ının adresini kendi paket chunk'ından türetiyor; paketlendikten
+// sonra o adres yanlış oluyor ve worker 404 alıyor. Worker açılmayınca tile'lar
+// ayrıştırılamıyor: zemin çizilir, üstünde hiçbir veri görünmez.
+// Vite'ın ?url eki dosyayı asset olarak yayınlayıp doğru adresi veriyor.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import type { StationSummaryDto } from '@/types'
 
@@ -13,8 +18,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [id: string] }>()
 
+setWorkerUrl(maplibreWorkerUrl)
+
 const container = ref<HTMLDivElement | null>(null)
 const mapError = ref<string | null>(null)
+
+// Geliştirme teşhisi: harita boş kalırsa nerede takıldığını ekrandan okuyalım.
+const debug = import.meta.env.DEV
+const diag = ref({ style: false, tilesLoading: 0, tilesLoaded: 0, errors: 0, lastError: '' })
 
 let map: MapLibreMap | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -110,13 +121,28 @@ onMounted(() => {
 
   // Tile veya stil hatası sessizce boş harita bırakmasın.
   instance.on('error', (event) => {
-    const status = (event.error as { status?: number } | undefined)?.status
+    const error = event.error as { status?: number; message?: string } | undefined
 
-    mapError.value = status === 403 || status === 401
+    mapError.value = error?.status === 403 || error?.status === 401
       ? 'Harita anahtarı reddedildi (403). MapTiler anahtarını kontrol edin.'
       : 'Harita katmanı yüklenemedi.'
 
+    diag.value.errors += 1
+    diag.value.lastError = `${error?.status ?? ''} ${error?.message ?? ''}`.trim().slice(0, 80)
+
     console.error('[harita]', event.error)
+  })
+
+  instance.on('styledata', () => {
+    diag.value.style = true
+  })
+
+  instance.on('dataloading', (event) => {
+    if (event.dataType === 'source') diag.value.tilesLoading += 1
+  })
+
+  instance.on('data', (event) => {
+    if (event.dataType === 'source' && event.isSourceLoaded) diag.value.tilesLoaded += 1
   })
 
   // Kapsayıcı sonradan boyutlanırsa (alt sayfa animasyonu vb.) canvas'ı güncelle.
@@ -160,6 +186,17 @@ defineExpose({
       role="alert"
     >
       {{ mapError }}
+    </p>
+
+    <p
+      v-if="debug"
+      class="pointer-events-none absolute bottom-2 left-2 z-10 rounded bg-black/75 px-2 py-1 font-mono text-[10px] leading-tight text-white"
+    >
+      stil:{{ diag.style ? 'OK' : '—' }}
+      istek:{{ diag.tilesLoading }}
+      yüklendi:{{ diag.tilesLoaded }}
+      hata:{{ diag.errors }}
+      <template v-if="diag.lastError"><br />{{ diag.lastError }}</template>
     </p>
   </div>
 </template>
