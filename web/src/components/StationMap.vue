@@ -14,8 +14,10 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [id: string] }>()
 
 const container = ref<HTMLDivElement | null>(null)
+const mapError = ref<string | null>(null)
 
 let map: MapLibreMap | null = null
+let resizeObserver: ResizeObserver | null = null
 let markers = new Map<string, Marker>()
 let userMarker: Marker | null = null
 
@@ -105,9 +107,26 @@ onMounted(() => {
     renderUser()
     renderMarkers()
   })
+
+  // Tile veya stil hatası sessizce boş harita bırakmasın.
+  instance.on('error', (event) => {
+    const status = (event.error as { status?: number } | undefined)?.status
+
+    mapError.value = status === 403 || status === 401
+      ? 'Harita anahtarı reddedildi (403). MapTiler anahtarını kontrol edin.'
+      : 'Harita katmanı yüklenemedi.'
+
+    console.error('[harita]', event.error)
+  })
+
+  // Kapsayıcı sonradan boyutlanırsa (alt sayfa animasyonu vb.) canvas'ı güncelle.
+  resizeObserver = new ResizeObserver(() => instance.resize())
+  resizeObserver.observe(container.value)
 })
 
 onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
   map?.remove()
   map = null
 })
@@ -132,5 +151,15 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="container" class="h-full w-full" />
+  <div class="relative h-full w-full">
+    <div ref="container" class="h-full w-full" />
+
+    <p
+      v-if="mapError"
+      class="absolute inset-x-3 top-3 z-10 rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white shadow-lg"
+      role="alert"
+    >
+      {{ mapError }}
+    </p>
+  </div>
 </template>
