@@ -10,9 +10,11 @@ obj/
 # Node / Vue
 node_modules/
 dist/
+*.tsbuildinfo
 
 # Ortam dosyaları (gizli bilgi içerir)
 .env
 .env.*
+!.env.example
 appsettings.Development.json
 appsettings.Local.json

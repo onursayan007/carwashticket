@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>CarWashTicket.Api</RootNamespace>
+    <!-- macOS bu diskte ._ yan dosyaları üretiyor, derlemeye girmesinler. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);**/._*</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

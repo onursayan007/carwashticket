@@ -135,6 +135,6 @@ public class AuthController(
         return Ok(new AuthResponse(
             accessToken,
             expiresAt,
-            new UserDto(user.Id, user.Email!, user.FullName, roles)));
+            new UserDto(user.Id, user.Email!, user.FullName, [.. roles])));
     }
 }
