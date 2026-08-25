@@ -98,7 +98,7 @@ function onLogout() {
 </script>
 
 <template>
-  <main class="relative h-dvh overflow-hidden bg-slate-100">
+  <main class="relative h-dvh overflow-hidden bg-brand-mist">
     <!-- Harita tüm ekranı kaplıyor, arayüz üstünde yüzüyor. -->
     <div class="absolute inset-0">
       <StationMap
@@ -115,11 +115,11 @@ function onLogout() {
     <div class="pointer-events-none absolute inset-x-0 top-0 z-10 space-y-2.5 p-3">
       <div class="pointer-events-auto flex items-center gap-2">
         <div
-          class="flex flex-1 items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-lg ring-1 ring-black/5"
+          class="flex flex-1 items-center gap-3 rounded-xl bg-white px-4 py-2.5 shadow-lg ring-2 ring-brand-sponge"
         >
-          <span class="text-base text-slate-400" aria-hidden="true">🔍</span>
+          <span class="text-base" aria-hidden="true">🔍</span>
           <span class="min-w-0">
-            <span class="block text-sm font-semibold text-slate-900">Araç yıkama</span>
+            <span class="block text-sm font-bold text-brand-navy">Araç yıkama</span>
             <span class="block truncate text-xs text-slate-500">
               {{ locationState === 'granted' ? 'Konumunuza yakın' : 'Antalya çevresi' }}
             </span>
@@ -128,7 +128,7 @@ function onLogout() {
 
         <RouterLink
           :to="{ name: 'wallet' }"
-          class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-lg shadow-lg ring-1 ring-black/5"
+          class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-lg shadow-lg ring-1 ring-brand-navy/10"
           aria-label="Biletlerim"
         >
           🎟️
@@ -136,7 +136,7 @@ function onLogout() {
 
         <button
           type="button"
-          class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-lg shadow-lg ring-1 ring-black/5"
+          class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-lg shadow-lg ring-1 ring-brand-navy/10"
           aria-label="Çıkış"
           @click="onLogout"
         >
@@ -153,8 +153,8 @@ function onLogout() {
           class="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium shadow-md ring-1 transition"
           :class="
             sort === option.value
-              ? 'bg-slate-900 text-white ring-slate-900'
-              : 'bg-white text-slate-700 ring-black/5 hover:bg-slate-50'
+              ? 'bg-brand-navy text-white ring-brand-navy'
+              : 'bg-white text-brand-navy ring-brand-navy/15 hover:bg-brand-blue-soft'
           "
           @click="sort = option.value"
         >
@@ -189,7 +189,7 @@ function onLogout() {
             class="w-full p-4 pr-10 text-left"
             @click="open(selectedStation.id)"
           >
-            <p class="font-semibold text-slate-900">{{ selectedStation.name }}</p>
+            <p class="font-bold text-brand-blue">{{ selectedStation.name }}</p>
             <p class="mt-0.5 text-sm text-slate-500">
               {{ typeLabel(selectedStation.type) }}
               <template v-if="distanceLabel(selectedStation.distanceKm)">
@@ -198,14 +198,21 @@ function onLogout() {
             </p>
 
             <div class="mt-3 flex items-center justify-between">
-              <span class="text-sm font-medium text-amber-600">
-                ★ {{ selectedStation.ratingAverage.toFixed(1) }}
-                <span class="font-normal text-slate-400">({{ selectedStation.ratingCount }})</span>
+              <span class="flex items-center gap-2">
+                <span
+                  class="rounded-md rounded-bl-none bg-brand-navy px-1.5 py-0.5 text-xs font-bold text-white tabular-nums"
+                >
+                  {{ selectedStation.ratingAverage.toFixed(1) }}
+                </span>
+                <span class="text-xs text-slate-500">
+                  {{ selectedStation.ratingCount }} değerlendirme
+                </span>
               </span>
-              <span v-if="selectedStation.minPrice !== null" class="font-semibold text-slate-900">
-                {{ money.format(selectedStation.minPrice) }}<span
-                  class="text-sm font-normal text-slate-400"
-                >'den</span>
+              <span v-if="selectedStation.minPrice !== null" class="text-right">
+                <span class="block text-[11px] text-slate-400">başlangıç</span>
+                <span class="font-bold text-brand-navy">
+                  {{ money.format(selectedStation.minPrice) }}
+                </span>
               </span>
             </div>
           </button>
@@ -226,8 +233,8 @@ function onLogout() {
       >
         <span class="h-1.5 w-10 rounded-full bg-slate-300" aria-hidden="true" />
         <span class="flex w-full items-center justify-between px-4">
-          <span class="text-sm font-semibold text-slate-900">{{ heading }}</span>
-          <span class="text-xs font-medium text-slate-500">
+          <span class="text-sm font-bold text-brand-navy">{{ heading }}</span>
+          <span class="text-xs font-semibold text-brand-blue">
             {{ expanded ? 'Haritayı gör' : 'Listeyi aç' }}
           </span>
         </span>
@@ -248,41 +255,47 @@ function onLogout() {
           <li v-for="station in stations" :key="station.id">
             <button
               type="button"
-              class="w-full rounded-2xl border p-3 text-left transition"
+              class="w-full rounded-xl border p-3 text-left transition"
               :class="
                 selectedId === station.id
-                  ? 'border-slate-900 bg-slate-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-brand-blue bg-brand-blue-soft'
+                  : 'border-brand-navy/15 hover:border-brand-blue hover:bg-brand-mist'
               "
               @click="open(station.id)"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                  <p class="truncate font-semibold text-slate-900">{{ station.name }}</p>
+                  <p class="truncate font-bold text-brand-blue">{{ station.name }}</p>
                   <p class="mt-0.5 truncate text-xs text-slate-500">
                     {{ station.district }}<template v-if="station.city">, {{ station.city }}</template>
                   </p>
                 </div>
 
                 <span
-                  class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                  class="shrink-0 rounded-md bg-brand-sky px-2 py-0.5 text-[11px] font-semibold text-brand-navy"
                 >
                   {{ typeLabel(station.type) }}
                 </span>
               </div>
 
               <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                <span class="font-medium text-amber-600">
-                  ★ {{ station.ratingAverage.toFixed(1) }}
-                  <span class="font-normal text-slate-400">({{ station.ratingCount }})</span>
+                <span class="flex items-center gap-1.5">
+                  <span
+                    class="rounded-md rounded-bl-none bg-brand-navy px-1.5 py-0.5 text-[11px] font-bold text-white tabular-nums"
+                  >
+                    {{ station.ratingAverage.toFixed(1) }}
+                  </span>
+                  <span class="text-slate-500">{{ station.ratingCount }}</span>
                 </span>
 
                 <span v-if="distanceLabel(station.distanceKm)" class="text-slate-500">
                   {{ distanceLabel(station.distanceKm) }}
                 </span>
 
-                <span v-if="station.minPrice !== null" class="ml-auto font-semibold text-slate-900">
-                  {{ money.format(station.minPrice) }}<span class="font-normal text-slate-400">'den</span>
+                <span v-if="station.minPrice !== null" class="ml-auto font-bold text-brand-navy">
+                  {{ money.format(station.minPrice) }}<span
+                    class="font-normal text-slate-400"
+                  >'den</span>
                 </span>
               </div>
             </button>

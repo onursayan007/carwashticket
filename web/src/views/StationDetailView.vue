@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { apiFetch, errorMessage } from '@/api/client'
+import { serviceLook } from '@/serviceLook'
 import type { CreateOrderResponse, ServiceDto, StationDetailDto } from '@/types'
 
 const props = defineProps<{ id: string }>()
@@ -115,18 +116,18 @@ async function startCheckout() {
 </script>
 
 <template>
-  <main class="min-h-dvh bg-slate-50 pb-40">
+  <main class="min-h-dvh bg-brand-mist pb-40">
     <header
-      class="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur"
+      class="sticky top-0 z-10 flex items-center gap-3 bg-brand-navy px-4 py-3 text-white"
     >
       <RouterLink
         :to="{ name: 'stations' }"
-        class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-600 hover:bg-slate-100"
+        class="grid h-9 w-9 shrink-0 place-items-center rounded-lg hover:bg-white/15"
         aria-label="Geri"
       >
         ←
       </RouterLink>
-      <h1 class="min-w-0 flex-1 truncate font-semibold text-slate-900">
+      <h1 class="min-w-0 flex-1 truncate font-semibold">
         {{ station?.name ?? 'Yükleniyor…' }}
       </h1>
     </header>
@@ -146,22 +147,26 @@ async function startCheckout() {
       <section class="border-b border-slate-200 bg-white px-4 py-4">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <h2 class="text-lg font-semibold text-slate-900">{{ station.name }}</h2>
+            <h2 class="text-lg font-bold text-brand-navy">{{ station.name }}</h2>
             <p v-if="station.address" class="mt-0.5 text-sm text-slate-500">
               {{ station.address }}
             </p>
           </div>
           <span
-            class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+            class="shrink-0 rounded-md bg-brand-sky px-2.5 py-1 text-xs font-semibold text-brand-navy"
           >
             {{ station.type === 'SelfService' ? 'Self servis' : station.type === 'FullService' ? 'Tam hizmet' : 'Karma' }}
           </span>
         </div>
 
-        <div class="mt-3 flex items-center gap-4 text-sm">
-          <span class="font-medium text-amber-600">
-            ★ {{ station.ratingAverage.toFixed(1) }}
-            <span class="font-normal text-slate-400">({{ station.ratingCount }} değerlendirme)</span>
+        <div class="mt-3 flex items-center gap-2">
+          <span
+            class="rounded-md rounded-bl-none bg-brand-navy px-2 py-1 text-sm font-bold text-white tabular-nums"
+          >
+            {{ station.ratingAverage.toFixed(1) }}
+          </span>
+          <span class="text-sm text-slate-500">
+            {{ station.ratingCount }} değerlendirme
           </span>
         </div>
       </section>
@@ -170,7 +175,7 @@ async function startCheckout() {
       <div class="space-y-6 p-4">
         <section v-for="group in groups" :key="group.title">
           <div class="mb-2 flex items-baseline justify-between">
-            <h3 class="text-sm font-semibold text-slate-900">{{ group.title }}</h3>
+            <h3 class="text-sm font-bold text-brand-navy">{{ group.title }}</h3>
             <p class="text-xs text-slate-400">{{ group.hint }}</p>
           </div>
 
@@ -178,19 +183,27 @@ async function startCheckout() {
             <li
               v-for="service in group.items"
               :key="service.id"
-              class="flex items-center gap-3 rounded-2xl border p-3 transition"
+              class="flex items-center gap-3 rounded-xl border bg-white p-3 transition"
               :class="
                 quantityOf(service) > 0
-                  ? 'border-slate-900 bg-white shadow-sm'
-                  : 'border-slate-200 bg-white'
+                  ? 'border-brand-blue shadow-sm'
+                  : 'border-brand-navy/15'
               "
             >
+              <span
+                class="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-xl"
+                :class="serviceLook(service.name).chip"
+                aria-hidden="true"
+              >
+                {{ serviceLook(service.name).icon }}
+              </span>
+
               <div class="min-w-0 flex-1">
-                <p class="font-medium text-slate-900">{{ service.name }}</p>
+                <p class="font-semibold text-brand-navy">{{ service.name }}</p>
                 <p v-if="service.description" class="mt-0.5 text-xs text-slate-500">
                   {{ service.description }}
                 </p>
-                <p class="mt-1 text-sm font-semibold text-slate-900">
+                <p class="mt-1 text-sm font-bold text-brand-navy">
                   {{ money.format(service.price) }}
                   <span class="text-xs font-normal text-slate-400">
                     · ~{{ service.durationMinutes }} dk
@@ -202,7 +215,7 @@ async function startCheckout() {
               <button
                 v-if="quantityOf(service) === 0"
                 type="button"
-                class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-900 text-xl font-light text-white transition hover:bg-slate-700"
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-blue text-xl font-light text-white transition hover:bg-brand-blue-dark"
                 :aria-label="`${service.name} ekle`"
                 @click="setQuantity(service, 1)"
               >
@@ -211,7 +224,7 @@ async function startCheckout() {
 
               <div
                 v-else
-                class="flex shrink-0 items-center gap-1 rounded-full bg-slate-900 p-1 text-white"
+                class="flex shrink-0 items-center gap-1 rounded-full bg-brand-blue p-1 text-white"
               >
                 <button
                   type="button"
@@ -272,7 +285,7 @@ async function startCheckout() {
           <button
             type="button"
             :disabled="submitting"
-            class="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3.5 text-white transition hover:bg-slate-800 disabled:opacity-50"
+            class="flex w-full items-center justify-between gap-3 rounded-xl bg-brand-blue px-4 py-3.5 text-white transition hover:bg-brand-blue-dark disabled:opacity-50"
             @click="startCheckout"
           >
             <span

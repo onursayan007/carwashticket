@@ -1,12 +1,27 @@
 @import "tailwindcss";
 
-/* Booking benzeri palet: lacivert başlık, mavi eylem, sarı puan, yeşil olumlu bilgi. */
+/* Booking benzeri düzen, açık mavi palet.
+   Lacivert (parlamento) başlık ve metin, mavi eylem, bebe mavisi zemin.
+   Su ve köpük hizmetin kimliği: su camgöbeği, köpük pembe, sünger sarısı. */
 @theme {
-  --color-brand-navy: #003b95;
-  --color-brand-navy-dark: #002a6b;
-  --color-brand-blue: #0071c2;
-  --color-brand-blue-dark: #005999;
-  --color-brand-blue-soft: #ebf3ff;
-  --color-brand-yellow: #febb02;
-  --color-brand-green: #008009;
+  --color-brand-navy: #1b3b6f;
+  --color-brand-navy-dark: #12294d;
+
+  --color-brand-blue: #0a6ed1;
+  --color-brand-blue-dark: #0857a8;
+  --color-brand-blue-soft: #e6f2ff;
+
+  --color-brand-sky: #d9ecff;
+  --color-brand-mist: #f2f8ff;
+
+  --color-brand-water: #1ba3e0;
+  --color-brand-water-soft: #dcf3fd;
+
+  --color-brand-foam: #f26aa3;
+  --color-brand-foam-soft: #ffe6f1;
+
+  --color-brand-sponge: #f5a524;
+  --color-brand-sponge-soft: #fff2dc;
+
+  --color-brand-green: #0a7d33;
 }

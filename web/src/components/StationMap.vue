@@ -39,12 +39,18 @@ const styleUrl = key
 function buildMarkerElement(station: StationSummaryDto, selected: boolean): HTMLElement {
   const el = document.createElement('button')
   el.type = 'button'
+
+  // Self serviste birim satılıyor (su/köpük) — camgöbeği; tam hizmet lacivert.
+  const selfService = station.type !== 'FullService'
+
   el.className = [
-    'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-lg',
+    'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold shadow-lg',
     'ring-2 transition-transform',
     selected
-      ? 'bg-slate-900 text-white ring-white scale-110'
-      : 'bg-white text-slate-900 ring-slate-900/10',
+      ? 'bg-brand-navy text-white ring-white scale-110'
+      : selfService
+        ? 'bg-white text-brand-water ring-brand-water/40'
+        : 'bg-white text-brand-navy ring-brand-navy/20',
   ].join(' ')
 
   el.textContent = station.minPrice !== null ? `${Math.round(station.minPrice)}₺` : '•'
@@ -85,7 +91,7 @@ function renderUser() {
   }
 
   const el = document.createElement('div')
-  el.className = 'h-4 w-4 rounded-full bg-blue-600 ring-4 ring-blue-600/30'
+  el.className = 'h-4 w-4 rounded-full bg-brand-blue ring-4 ring-brand-blue/30'
 
   userMarker?.remove()
   userMarker = new Marker({ element: el })

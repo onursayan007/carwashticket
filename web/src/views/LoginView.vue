@@ -35,13 +35,14 @@ async function onSubmit() {
 </script>
 
 <template>
-  <main class="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+  <main class="flex min-h-dvh items-center justify-center bg-brand-navy p-4">
     <form
-      class="w-full max-w-sm space-y-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+      class="w-full max-w-sm space-y-5 rounded-2xl bg-white p-6 shadow-2xl"
       @submit.prevent="onSubmit"
     >
       <div>
-        <h1 class="text-xl font-semibold text-slate-900">Giriş yap</h1>
+        <p class="text-3xl" aria-hidden="true">🫧</p>
+        <h1 class="mt-2 text-xl font-bold text-brand-navy">Giriş yap</h1>
         <p class="mt-1 text-sm text-slate-500">Araç yıkama bileti</p>
       </div>
 
@@ -61,7 +62,7 @@ async function onSubmit() {
           type="email"
           autocomplete="email"
           required
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
         />
       </div>
 
@@ -73,14 +74,14 @@ async function onSubmit() {
           type="password"
           autocomplete="current-password"
           required
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
         />
       </div>
 
       <button
         type="submit"
         :disabled="submitting"
-        class="w-full rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        class="w-full rounded-lg bg-brand-blue px-4 py-3 font-semibold text-white transition hover:bg-brand-blue-dark disabled:opacity-50"
       >
         {{ submitting ? 'Giriş yapılıyor…' : 'Giriş yap' }}
       </button>

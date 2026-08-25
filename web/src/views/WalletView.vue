@@ -44,12 +44,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50">
-    <header class="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
-      <RouterLink :to="{ name: 'stations' }" class="text-sm text-slate-500 hover:text-slate-900">
+  <main class="min-h-dvh bg-brand-mist">
+    <header class="flex items-center gap-3 bg-brand-navy px-4 py-3 text-white">
+      <RouterLink :to="{ name: 'stations' }" class="text-sm text-white/80 hover:text-white">
         ← Geri
       </RouterLink>
-      <h1 class="text-lg font-semibold text-slate-900">Biletlerim</h1>
+      <h1 class="text-lg font-semibold">Biletlerim</h1>
     </header>
 
     <div class="mx-auto max-w-2xl space-y-8 p-4">
@@ -79,7 +79,7 @@ onMounted(async () => {
             <li
               v-for="ticket in activeTickets"
               :key="ticket.id"
-              class="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200"
+              class="overflow-hidden rounded-xl bg-white ring-1 ring-brand-navy/15"
             >
               <button
                 type="button"
@@ -88,7 +88,7 @@ onMounted(async () => {
                 @click="toggle(ticket.id)"
               >
                 <span class="min-w-0">
-                  <span class="block font-medium text-slate-900">{{ ticket.serviceName }}</span>
+                  <span class="block font-semibold text-brand-navy">{{ ticket.serviceName }}</span>
                   <span class="mt-0.5 block text-sm text-slate-500">{{ ticket.stationName }}</span>
                   <span class="mt-1 block text-xs text-slate-400">
                     Son kullanım: {{ date.format(new Date(ticket.expiresAt)) }}
@@ -122,7 +122,7 @@ onMounted(async () => {
               class="flex items-start justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200 opacity-60"
             >
               <span class="min-w-0">
-                <span class="block font-medium text-slate-900">{{ ticket.serviceName }}</span>
+                <span class="block font-semibold text-brand-navy">{{ ticket.serviceName }}</span>
                 <span class="mt-0.5 block text-sm text-slate-500">{{ ticket.stationName }}</span>
               </span>
               <span class="shrink-0 text-xs text-slate-500">{{ statusLabel(ticket) }}</span>
