@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CarWashTicket.Api.Data;
 using CarWashTicket.Api.Entities;
 using CarWashTicket.Api.Ledger;
+using CarWashTicket.Api.Notifications;
 using CarWashTicket.Api.Orders;
 using CarWashTicket.Api.Payments;
 using CarWashTicket.Api.Services;
@@ -128,6 +129,7 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<TicketService>();
 builder.Services.AddScoped<StationQueryService>();
+builder.Services.AddScoped<INotificationSender, MockNotificationSender>();
 
 var app = builder.Build();
 

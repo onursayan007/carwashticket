@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
     meta: { roles: ['Business'] },
   },
   {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('@/views/AdminView.vue'),
+    meta: { roles: ['Admin'] },
+  },
+  {
     path: '/forbidden',
     name: 'forbidden',
     component: () => import('@/views/ForbiddenView.vue'),
@@ -69,6 +75,7 @@ const routes: RouteRecordRaw[] = [
 
 // Rol başına açılış ekranı. Birden fazla rolü olana en yetkilisi verilir.
 export function homeRouteFor(roles: readonly Role[]): RouteLocationRaw {
+  if (roles.includes('Admin')) return { name: 'admin' }
   if (roles.includes('Business')) return { name: 'manage' }
   if (roles.includes('Scanner')) return { name: 'scan' }
   if (roles.includes('Customer')) return { name: 'stations' }

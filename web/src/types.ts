@@ -18,6 +18,27 @@ export type ServiceDto = Required<Schemas['ServiceDto']>
 
 export type StationSort = Schemas['StationSort']
 
+export type BusinessSummaryDto = Omit<
+  Required<Schemas['BusinessSummaryDto']>,
+  'companyName' | 'city' | 'district' | 'contactEmail'
+> & {
+  companyName: string | null
+  city: string | null
+  district: string | null
+  contactEmail: string | null
+}
+
+// Koordinatlar şemada optional ama form onları hep dolduruyor.
+export type CreateBusinessRequest = Omit<
+  Schemas['CreateBusinessRequest'],
+  'latitude' | 'longitude'
+> & {
+  latitude: number
+  longitude: number
+}
+
+export type CreateBusinessResponse = Required<Schemas['CreateBusinessResponse']>
+
 export type StationType = Schemas['StationType']
 
 export type StationSummaryDto = Omit<

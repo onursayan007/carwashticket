@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+/* Booking benzeri palet: lacivert başlık, mavi eylem, sarı puan, yeşil olumlu bilgi. */
+@theme {
+  --color-brand-navy: #003b95;
+  --color-brand-navy-dark: #002a6b;
+  --color-brand-blue: #0071c2;
+  --color-brand-blue-dark: #005999;
+  --color-brand-blue-soft: #ebf3ff;
+  --color-brand-yellow: #febb02;
+  --color-brand-green: #008009;
+}

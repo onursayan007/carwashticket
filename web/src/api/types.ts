@@ -4,6 +4,84 @@
  */
 
 export interface paths {
+    "/api/admin/businesses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BusinessSummaryDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateBusinessRequest"];
+                    "text/json": components["schemas"]["CreateBusinessRequest"];
+                    "application/*+json": components["schemas"]["CreateBusinessRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CreateBusinessResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -730,6 +808,48 @@ export interface components {
             /** Format: date-time */
             expiresAt?: string;
             user?: components["schemas"]["UserDto"];
+        };
+        BusinessSummaryDto: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            type?: components["schemas"]["StationType"];
+            companyName?: string | null;
+            city?: string | null;
+            district?: string | null;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            contactEmail?: string | null;
+            isActive?: boolean;
+            /** Format: int32 */
+            serviceCount?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        CreateBusinessRequest: {
+            name: string;
+            type?: components["schemas"]["StationType"];
+            companyName?: string | null;
+            taxNumber?: string | null;
+            taxOffice?: string | null;
+            address?: string | null;
+            city?: string | null;
+            district?: string | null;
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: email */
+            contactEmail: string;
+            phoneNumber?: string | null;
+        };
+        CreateBusinessResponse: {
+            /** Format: uuid */
+            stationId?: string;
+            ownerEmail?: string;
+            message?: string;
         };
         CreateOrderRequest: {
             /** Format: uuid */

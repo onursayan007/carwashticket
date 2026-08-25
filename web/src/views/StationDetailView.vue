@@ -1,27 +1,63 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { apiFetch, errorMessage } from '@/api/client'
-import type { CreateOrderResponse, StationDetailDto } from '@/types'
+import type { CreateOrderResponse, ServiceDto, StationDetailDto } from '@/types'
 
 const props = defineProps<{ id: string }>()
 
+const MAX_PER_ITEM = 20
+
 const station = ref<StationDetailDto | null>(null)
-const selectedServiceId = ref<string | null>(null)
 const error = ref<string | null>(null)
 const loading = ref(true)
+
+// Hizmet kimliği -> adet. Sepetin tamamı burada.
+const quantities = ref<Record<string, number>>({})
 
 const checkoutError = ref<string | null>(null)
 const submitting = ref(false)
 
-// Aynı seçim için sabit kalır: istek başarısız olup tekrar denenirse sunucu
-// bunu aynı sipariş olarak tanır. Seçim değişince yenilenir.
+// Sepet değişince yenileniyor: aynı sepet için tekrar denemeler tek sipariş sayılır,
+// sepet değişirse yeni bir sipariş olur.
 const idempotencyKey = ref(crypto.randomUUID())
 
 const money = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })
 
-const selectedService = computed(
-  () => station.value?.services.find((s) => s.id === selectedServiceId.value) ?? null,
+const cart = computed(() =>
+  (station.value?.services ?? [])
+    .map((service) => ({ service, quantity: quantities.value[service.id] ?? 0 }))
+    .filter((line) => line.quantity > 0),
 )
+
+const itemCount = computed(() => cart.value.reduce((sum, line) => sum + line.quantity, 0))
+
+const total = computed(() =>
+  cart.value.reduce((sum, line) => sum + line.service.price * line.quantity, 0),
+)
+
+// Self serviste birim, tam hizmette paket satılıyor. İkisi varsa ayrı başlık altında.
+const groups = computed(() => {
+  const services = station.value?.services ?? []
+
+  return [
+    { title: 'Birim seçin', hint: 'İstediğiniz kadar ekleyin', items: services.filter((s) => s.kind === 'Unit') },
+    { title: 'Paketler', hint: 'Aracınızı teslim edin', items: services.filter((s) => s.kind === 'Package') },
+  ].filter((group) => group.items.length > 0)
+})
+
+function quantityOf(service: ServiceDto): number {
+  return quantities.value[service.id] ?? 0
+}
+
+function setQuantity(service: ServiceDto, next: number) {
+  const clamped = Math.max(0, Math.min(MAX_PER_ITEM, next))
+
+  if (clamped === 0) {
+    delete quantities.value[service.id]
+  } else {
+    quantities.value[service.id] = clamped
+  }
+}
 
 onMounted(async () => {
   try {
@@ -33,13 +69,17 @@ onMounted(async () => {
   }
 })
 
-watch(selectedServiceId, () => {
-  idempotencyKey.value = crypto.randomUUID()
-  checkoutError.value = null
-})
+watch(
+  quantities,
+  () => {
+    idempotencyKey.value = crypto.randomUUID()
+    checkoutError.value = null
+  },
+  { deep: true },
+)
 
 async function startCheckout() {
-  if (!station.value || !selectedService.value || submitting.value) {
+  if (!station.value || cart.value.length === 0 || submitting.value) {
     return
   }
 
@@ -52,7 +92,10 @@ async function startCheckout() {
       headers: { 'Idempotency-Key': idempotencyKey.value },
       body: {
         stationId: station.value.id,
-        items: [{ serviceId: selectedService.value.id, quantity: 1 }],
+        items: cart.value.map((line) => ({
+          serviceId: line.service.id,
+          quantity: line.quantity,
+        })),
       },
     })
 
@@ -72,96 +115,178 @@ async function startCheckout() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 pb-24">
-    <header class="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
-      <RouterLink :to="{ name: 'stations' }" class="text-sm text-slate-500 hover:text-slate-900">
-        ← Geri
+  <main class="min-h-dvh bg-slate-50 pb-40">
+    <header
+      class="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur"
+    >
+      <RouterLink
+        :to="{ name: 'stations' }"
+        class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-slate-600 hover:bg-slate-100"
+        aria-label="Geri"
+      >
+        ←
       </RouterLink>
-      <h1 class="truncate text-lg font-semibold text-slate-900">
-        {{ station?.name ?? 'İstasyon' }}
+      <h1 class="min-w-0 flex-1 truncate font-semibold text-slate-900">
+        {{ station?.name ?? 'Yükleniyor…' }}
       </h1>
     </header>
 
-    <div class="mx-auto max-w-2xl p-4">
-      <p v-if="loading" class="py-8 text-center text-sm text-slate-500">Yükleniyor…</p>
+    <p v-if="loading" class="py-16 text-center text-sm text-slate-500">Yükleniyor…</p>
 
-      <p
-        v-else-if="error"
-        class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
-        role="alert"
-      >
-        {{ error }}
-      </p>
+    <p
+      v-else-if="error"
+      class="mx-4 mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700"
+      role="alert"
+    >
+      {{ error }}
+    </p>
 
-      <template v-else-if="station">
-        <p v-if="station.address" class="text-sm text-slate-500">{{ station.address }}</p>
+    <div v-else-if="station" class="mx-auto max-w-2xl">
+      <!-- İşyeri künyesi -->
+      <section class="border-b border-slate-200 bg-white px-4 py-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-slate-900">{{ station.name }}</h2>
+            <p v-if="station.address" class="mt-0.5 text-sm text-slate-500">
+              {{ station.address }}
+            </p>
+          </div>
+          <span
+            class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+          >
+            {{ station.type === 'SelfService' ? 'Self servis' : station.type === 'FullService' ? 'Tam hizmet' : 'Karma' }}
+          </span>
+        </div>
 
-        <h2 class="mt-6 mb-2 text-sm font-medium text-slate-700">Hizmetler</h2>
+        <div class="mt-3 flex items-center gap-4 text-sm">
+          <span class="font-medium text-amber-600">
+            ★ {{ station.ratingAverage.toFixed(1) }}
+            <span class="font-normal text-slate-400">({{ station.ratingCount }} değerlendirme)</span>
+          </span>
+        </div>
+      </section>
 
-        <p v-if="station.services.length === 0" class="text-sm text-slate-500">
-          Bu istasyonda tanımlı hizmet yok.
-        </p>
+      <!-- Hizmetler -->
+      <div class="space-y-6 p-4">
+        <section v-for="group in groups" :key="group.title">
+          <div class="mb-2 flex items-baseline justify-between">
+            <h3 class="text-sm font-semibold text-slate-900">{{ group.title }}</h3>
+            <p class="text-xs text-slate-400">{{ group.hint }}</p>
+          </div>
 
-        <ul v-else class="space-y-2">
-          <li v-for="service in station.services" :key="service.id">
-            <button
-              type="button"
-              class="flex w-full items-start justify-between gap-4 rounded-xl bg-white p-4 text-left ring-1 transition"
+          <ul class="space-y-2">
+            <li
+              v-for="service in group.items"
+              :key="service.id"
+              class="flex items-center gap-3 rounded-2xl border p-3 transition"
               :class="
-                selectedServiceId === service.id
-                  ? 'ring-2 ring-slate-900'
-                  : 'ring-slate-200 hover:ring-slate-400'
+                quantityOf(service) > 0
+                  ? 'border-slate-900 bg-white shadow-sm'
+                  : 'border-slate-200 bg-white'
               "
-              @click="selectedServiceId = service.id"
             >
-              <span class="min-w-0">
-                <span class="block font-medium text-slate-900">{{ service.name }}</span>
-                <span v-if="service.description" class="mt-0.5 block text-sm text-slate-500">
+              <div class="min-w-0 flex-1">
+                <p class="font-medium text-slate-900">{{ service.name }}</p>
+                <p v-if="service.description" class="mt-0.5 text-xs text-slate-500">
                   {{ service.description }}
+                </p>
+                <p class="mt-1 text-sm font-semibold text-slate-900">
+                  {{ money.format(service.price) }}
+                  <span class="text-xs font-normal text-slate-400">
+                    · ~{{ service.durationMinutes }} dk
+                  </span>
+                </p>
+              </div>
+
+              <!-- Seçilmemişse sadece +, seçilmişse adet kontrolü -->
+              <button
+                v-if="quantityOf(service) === 0"
+                type="button"
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-900 text-xl font-light text-white transition hover:bg-slate-700"
+                :aria-label="`${service.name} ekle`"
+                @click="setQuantity(service, 1)"
+              >
+                +
+              </button>
+
+              <div
+                v-else
+                class="flex shrink-0 items-center gap-1 rounded-full bg-slate-900 p-1 text-white"
+              >
+                <button
+                  type="button"
+                  class="grid h-8 w-8 place-items-center rounded-full text-lg font-light transition hover:bg-white/15"
+                  :aria-label="`${service.name} azalt`"
+                  @click="setQuantity(service, quantityOf(service) - 1)"
+                >
+                  −
+                </button>
+                <span class="min-w-6 text-center text-sm font-semibold tabular-nums">
+                  {{ quantityOf(service) }}
                 </span>
-                <span class="mt-1 block text-xs text-slate-400">
-                  ~{{ service.durationMinutes }} dakika
-                </span>
-              </span>
-              <span class="shrink-0 font-semibold text-slate-900">
-                {{ money.format(service.price) }}
-              </span>
-            </button>
-          </li>
-        </ul>
-      </template>
+                <button
+                  type="button"
+                  class="grid h-8 w-8 place-items-center rounded-full text-lg font-light transition hover:bg-white/15 disabled:opacity-40"
+                  :disabled="quantityOf(service) >= MAX_PER_ITEM"
+                  :aria-label="`${service.name} artır`"
+                  @click="setQuantity(service, quantityOf(service) + 1)"
+                >
+                  +
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <p v-if="station.services.length === 0" class="py-8 text-center text-sm text-slate-500">
+          Bu işyerinde tanımlı hizmet yok.
+        </p>
+      </div>
     </div>
 
-    <div
-      v-if="selectedService"
-      class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white p-4"
+    <!-- Sepet çubuğu -->
+    <Transition
+      enter-active-class="transition duration-200"
+      enter-from-class="translate-y-full"
+      leave-active-class="transition duration-200"
+      leave-to-class="translate-y-full"
     >
-      <div class="mx-auto max-w-2xl space-y-3">
-        <p
-          v-if="checkoutError"
-          class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
-          role="alert"
-        >
-          {{ checkoutError }}
-        </p>
+      <div
+        v-if="itemCount > 0"
+        class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 backdrop-blur"
+      >
+        <div class="mx-auto max-w-2xl space-y-2">
+          <p
+            v-if="checkoutError"
+            class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert"
+          >
+            {{ checkoutError }}
+          </p>
 
-        <div class="flex items-center justify-between gap-4">
-          <span class="min-w-0 text-sm text-slate-600">
-            <span class="block truncate font-medium text-slate-900">
-              {{ selectedService.name }}
-            </span>
-            {{ money.format(selectedService.price) }}
-          </span>
+          <!-- Sepetin dökümü: "2 x Su · 1 x Köpük" -->
+          <p class="truncate px-1 text-xs text-slate-500">
+            {{ cart.map((l) => `${l.quantity} × ${l.service.name}`).join(' · ') }}
+          </p>
+
           <button
             type="button"
             :disabled="submitting"
-            class="shrink-0 rounded-lg bg-slate-900 px-5 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            class="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3.5 text-white transition hover:bg-slate-800 disabled:opacity-50"
             @click="startCheckout"
           >
-            {{ submitting ? 'Yönlendiriliyor…' : 'Devam et' }}
+            <span
+              class="grid h-7 min-w-7 place-items-center rounded-full bg-white/20 px-2 text-sm font-semibold tabular-nums"
+            >
+              {{ itemCount }}
+            </span>
+            <span class="font-semibold">
+              {{ submitting ? 'Yönlendiriliyor…' : 'Ödemeye geç' }}
+            </span>
+            <span class="font-semibold tabular-nums">{{ money.format(total) }}</span>
           </button>
         </div>
       </div>
-    </div>
+    </Transition>
   </main>
 </template>

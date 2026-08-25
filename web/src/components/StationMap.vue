@@ -23,10 +23,6 @@ setWorkerUrl(maplibreWorkerUrl)
 const container = ref<HTMLDivElement | null>(null)
 const mapError = ref<string | null>(null)
 
-// Geliştirme teşhisi: harita boş kalırsa nerede takıldığını ekrandan okuyalım.
-const debug = import.meta.env.DEV
-const diag = ref({ style: false, tilesLoading: 0, tilesLoaded: 0, errors: 0, lastError: '' })
-
 let map: MapLibreMap | null = null
 let resizeObserver: ResizeObserver | null = null
 let markers = new Map<string, Marker>()
@@ -127,23 +123,9 @@ onMounted(() => {
       ? 'Harita anahtarı reddedildi (403). MapTiler anahtarını kontrol edin.'
       : 'Harita katmanı yüklenemedi.'
 
-    diag.value.errors += 1
-    diag.value.lastError = `${error?.status ?? ''} ${error?.message ?? ''}`.trim().slice(0, 80)
-
     console.error('[harita]', event.error)
   })
 
-  instance.on('styledata', () => {
-    diag.value.style = true
-  })
-
-  instance.on('dataloading', (event) => {
-    if (event.dataType === 'source') diag.value.tilesLoading += 1
-  })
-
-  instance.on('data', (event) => {
-    if (event.dataType === 'source' && event.isSourceLoaded) diag.value.tilesLoaded += 1
-  })
 
   // Kapsayıcı sonradan boyutlanırsa (alt sayfa animasyonu vb.) canvas'ı güncelle.
   resizeObserver = new ResizeObserver(() => instance.resize())
@@ -186,17 +168,6 @@ defineExpose({
       role="alert"
     >
       {{ mapError }}
-    </p>
-
-    <p
-      v-if="debug"
-      class="pointer-events-none absolute bottom-2 left-2 z-10 rounded bg-black/75 px-2 py-1 font-mono text-[10px] leading-tight text-white"
-    >
-      stil:{{ diag.style ? 'OK' : '—' }}
-      istek:{{ diag.tilesLoading }}
-      yüklendi:{{ diag.tilesLoaded }}
-      hata:{{ diag.errors }}
-      <template v-if="diag.lastError"><br />{{ diag.lastError }}</template>
     </p>
   </div>
 </template>
