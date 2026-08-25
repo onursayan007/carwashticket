@@ -114,7 +114,7 @@ onUnmounted(stopScanner)
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-900 text-white">
+  <main class="min-h-dvh bg-brand-navy-dark text-white">
     <header class="flex items-center justify-between px-4 py-3">
       <h1 class="text-lg font-semibold">Bilet oku</h1>
       <button type="button" class="text-sm text-slate-400 hover:text-white" @click="onLogout">
@@ -146,7 +146,7 @@ onUnmounted(stopScanner)
         <div
           v-if="result"
           class="rounded-2xl p-8 text-center"
-          :class="result.success ? 'bg-emerald-500' : 'bg-red-500'"
+          :class="result.success ? 'bg-brand-green' : 'bg-red-600'"
           role="status"
           aria-live="assertive"
         >
@@ -162,7 +162,7 @@ onUnmounted(stopScanner)
 
         <div
           v-if="cameraBlocked"
-          class="rounded-xl bg-slate-800 p-4 text-sm text-slate-300"
+          class="rounded-xl bg-white/10 p-4 text-sm text-white/80"
           role="alert"
         >
           Kameraya erişilemedi. Kodu elle girebilirsiniz.
@@ -171,7 +171,7 @@ onUnmounted(stopScanner)
         <button
           v-if="!cameraBlocked"
           type="button"
-          class="w-full rounded-lg bg-white px-4 py-3 text-lg font-semibold text-slate-900"
+          class="w-full rounded-lg bg-white px-4 py-3 text-lg font-semibold text-brand-navy"
           @click="scanAgain"
         >
           Yeni bilet oku
@@ -190,12 +190,12 @@ onUnmounted(stopScanner)
             autocapitalize="off"
             spellcheck="false"
             placeholder="Bilet kodu"
-            class="min-w-0 flex-1 rounded-lg bg-slate-800 px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-white"
+            class="min-w-0 flex-1 rounded-lg bg-white/10 px-3 py-2 text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-white"
           />
           <button
             type="submit"
             :disabled="!manualCode.trim() || phase === 'checking'"
-            class="shrink-0 rounded-lg bg-white px-4 py-2 font-medium text-slate-900 disabled:opacity-40"
+            class="shrink-0 rounded-lg bg-white px-4 py-2 font-semibold text-brand-navy disabled:opacity-40"
           >
             Kontrol et
           </button>

@@ -133,6 +133,13 @@ builder.Services.AddScoped<INotificationSender, MockNotificationSender>();
 
 var app = builder.Build();
 
+// Konteynerde elle migration çalıştıracak kimse yok.
+if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

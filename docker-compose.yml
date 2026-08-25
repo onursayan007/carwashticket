@@ -1,0 +1,63 @@
+# Tek komutla demo: docker compose up --build
+# Her şey http://localhost:8080 arkasında; nginx SPA'yı sunar, /api'yi backend'e geçirir.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: carwash
+      POSTGRES_DB: carwashticket
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d carwashticket"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      # Development: seed verisi, Swagger ve mock ödeme bu ortamda açık.
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__Postgres: Host=db;Port=5432;Database=carwashticket;Username=postgres;Password=carwash
+      Database__MigrateOnStartup: "true"
+
+      # Demo anahtarı. Gerçek dağıtımda mutlaka değiştirilmeli.
+      Jwt__Key: ${JWT_KEY:-demo-only-signing-key-change-me-at-least-32-bytes}
+      Jwt__Issuer: carwashticket
+      Jwt__Audience: carwashticket-web
+
+      # Tek origin: çerez Lax ve http'de çalışabilir.
+      Auth__RefreshCookieSecure: "false"
+      Auth__RefreshCookieSameSite: Lax
+
+      Spa__BaseUrl: http://localhost:8080
+      Cors__AllowedOrigins__0: http://localhost:8080
+
+      Payment__UseMock: "true"
+      Payment__CommissionRate: "0.10"
+      Payment__CallbackUrl: http://localhost:8080/api/payments/callback
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        # Boş: API aynı origin'de, istekler göreli gidiyor.
+        VITE_API_BASE_URL: ""
+        VITE_MAPTILER_KEY: ${MAPTILER_KEY:-}
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

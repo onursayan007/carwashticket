@@ -15,9 +15,19 @@ namespace CarWashTicket.Api.Controllers;
 public class AuthController(
     AppDbContext db,
     UserManager<ApplicationUser> userManager,
-    TokenService tokenService) : ControllerBase
+    TokenService tokenService,
+    IConfiguration configuration) : ControllerBase
 {
     private const string RefreshCookieName = "refresh_token";
+
+    // SPA ile API ayrı origin'deyse SameSite=None + Secure şart.
+    // Tek origin arkasında (nginx) Lax yeterli ve http'de de çalışır.
+    private bool RefreshCookieSecure => configuration.GetValue("Auth:RefreshCookieSecure", true);
+
+    private SameSiteMode RefreshCookieSameSite =>
+        Enum.TryParse<SameSiteMode>(configuration["Auth:RefreshCookieSameSite"], true, out var mode)
+            ? mode
+            : SameSiteMode.None;
 
     [HttpPost("register")]
     [AllowAnonymous]
@@ -126,8 +136,8 @@ public class AuthController(
         Response.Cookies.Append(RefreshCookieName, rawRefreshToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.None,
+            Secure = RefreshCookieSecure,
+            SameSite = RefreshCookieSameSite,
             Expires = refreshExpiresAt,
             Path = "/api/auth"
         });

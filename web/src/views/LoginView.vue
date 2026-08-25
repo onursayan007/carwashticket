@@ -11,6 +11,20 @@ const router = useRouter()
 
 const email = ref('')
 const password = ref('')
+
+// Demo hesapları: ziyaretçi şifre yazmadan her rolü deneyebilsin.
+const DEMO_ACCOUNTS = [
+  { label: 'Müşteri', email: 'demo@test.com', icon: '🚗' },
+  { label: 'QR okuyucu', email: 'staff@test.com', icon: '📷' },
+  { label: 'İşyeri', email: 'isyeri@test.com', icon: '🏪' },
+  { label: 'Admin', email: 'admin@test.com', icon: '⚙️' },
+]
+
+async function loginAs(demoEmail: string) {
+  email.value = demoEmail
+  password.value = 'Demo123!'
+  await onSubmit()
+}
 const error = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -85,6 +99,26 @@ async function onSubmit() {
       >
         {{ submitting ? 'Giriş yapılıyor…' : 'Giriş yap' }}
       </button>
+
+      <div class="border-t border-slate-200 pt-4">
+        <p class="mb-2 text-center text-xs font-medium text-slate-500">
+          Demo hesabıyla dene
+        </p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            v-for="account in DEMO_ACCOUNTS"
+            :key="account.email"
+            type="button"
+            :disabled="submitting"
+            class="flex items-center justify-center gap-1.5 rounded-lg bg-brand-mist px-3 py-2 text-sm font-medium text-brand-navy transition hover:bg-brand-sky disabled:opacity-50"
+            @click="loginAs(account.email)"
+          >
+            <span aria-hidden="true">{{ account.icon }}</span>
+            {{ account.label }}
+          </button>
+        </div>
+      </div>
     </form>
   </main>
 </template>

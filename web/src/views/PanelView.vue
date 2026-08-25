@@ -136,12 +136,17 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50">
-    <header class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-      <h1 class="text-lg font-semibold text-slate-900">Yönetim paneli</h1>
-      <button type="button" class="text-sm text-slate-500 hover:text-slate-900" @click="onLogout">
-        Çıkış
-      </button>
+  <main class="min-h-dvh bg-brand-mist">
+    <header class="bg-brand-navy px-4 py-3 text-white">
+      <div class="mx-auto flex max-w-4xl items-center justify-between">
+        <div>
+          <h1 class="font-semibold">İşyeri paneli</h1>
+          <p class="text-xs text-white/70">Satışlar ve fiyatlar</p>
+        </div>
+        <button type="button" class="text-sm text-white/80 hover:text-white" @click="onLogout">
+          Çıkış
+        </button>
+      </div>
     </header>
 
     <div class="mx-auto max-w-4xl space-y-8 p-4">
@@ -150,7 +155,7 @@ onMounted(async () => {
       </p>
 
       <!-- Tarih aralığı -->
-      <section class="rounded-xl bg-white p-4 ring-1 ring-slate-200">
+      <section class="rounded-xl bg-white p-4 ring-1 ring-brand-navy/15">
         <form class="flex flex-wrap items-end gap-3" @submit.prevent="loadReport">
           <div class="space-y-1">
             <label for="from" class="block text-sm font-medium text-slate-700">Başlangıç</label>
@@ -173,7 +178,7 @@ onMounted(async () => {
           <button
             type="submit"
             :disabled="loading"
-            class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            class="rounded-lg bg-brand-blue px-4 py-2 font-semibold text-white transition hover:bg-brand-blue-dark disabled:opacity-50"
           >
             {{ loading ? 'Yükleniyor…' : 'Getir' }}
           </button>
@@ -182,25 +187,25 @@ onMounted(async () => {
 
       <!-- Özet -->
       <section v-if="summary" class="grid gap-3 sm:grid-cols-4">
-        <div class="rounded-xl bg-white p-4 ring-1 ring-slate-200">
+        <div class="rounded-xl bg-white p-4 ring-1 ring-brand-navy/15">
           <p class="text-xs text-slate-500">Sipariş</p>
-          <p class="mt-1 text-xl font-semibold text-slate-900">{{ summary.orderCount }}</p>
+          <p class="mt-1 text-xl font-bold text-brand-navy">{{ summary.orderCount }}</p>
         </div>
-        <div class="rounded-xl bg-white p-4 ring-1 ring-slate-200">
+        <div class="rounded-xl bg-white p-4 ring-1 ring-brand-navy/15">
           <p class="text-xs text-slate-500">Ciro</p>
-          <p class="mt-1 text-xl font-semibold text-slate-900">
+          <p class="mt-1 text-xl font-bold text-brand-navy">
             {{ money.format(summary.grossRevenue) }}
           </p>
         </div>
-        <div class="rounded-xl bg-white p-4 ring-1 ring-slate-200">
+        <div class="rounded-xl bg-white p-4 ring-1 ring-brand-navy/15">
           <p class="text-xs text-slate-500">Komisyon</p>
           <p class="mt-1 text-xl font-semibold text-slate-500">
             {{ money.format(summary.commission) }}
           </p>
         </div>
-        <div class="rounded-xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
-          <p class="text-xs text-emerald-700">Hakediş</p>
-          <p class="mt-1 text-xl font-semibold text-emerald-900">
+        <div class="rounded-xl bg-brand-blue-soft p-4 ring-1 ring-brand-blue/30">
+          <p class="text-xs text-brand-blue">Hakediş</p>
+          <p class="mt-1 text-xl font-bold text-brand-navy">
             {{ money.format(summary.stationShare) }}
           </p>
         </div>
@@ -208,13 +213,13 @@ onMounted(async () => {
 
       <!-- Siparişler -->
       <section>
-        <h2 class="mb-2 text-sm font-medium text-slate-700">Siparişler</h2>
+        <h2 class="mb-2 text-sm font-bold text-brand-navy">Siparişler</h2>
 
         <p v-if="orders.length === 0 && !loading" class="text-sm text-slate-500">
           Bu aralıkta sipariş yok.
         </p>
 
-        <div v-else class="overflow-x-auto rounded-xl bg-white ring-1 ring-slate-200">
+        <div v-else class="overflow-x-auto rounded-xl bg-white ring-1 ring-brand-navy/15">
           <table class="w-full text-left text-sm">
             <thead class="border-b border-slate-200 text-xs text-slate-500">
               <tr>
@@ -246,7 +251,7 @@ onMounted(async () => {
 
       <!-- Hizmetler -->
       <section class="space-y-3">
-        <h2 class="text-sm font-medium text-slate-700">Hizmetler</h2>
+        <h2 class="text-sm font-bold text-brand-navy">Hizmetler</h2>
 
         <p
           v-if="serviceError"
@@ -260,7 +265,7 @@ onMounted(async () => {
           <li
             v-for="service in services"
             :key="service.id"
-            class="flex items-center justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200"
+            class="flex items-center justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-brand-navy/15"
             :class="{ 'opacity-50': !service.isActive }"
           >
             <span class="min-w-0">
@@ -284,10 +289,10 @@ onMounted(async () => {
         </ul>
 
         <form
-          class="space-y-3 rounded-xl bg-white p-4 ring-1 ring-slate-200"
+          class="space-y-3 rounded-xl bg-white p-4 ring-1 ring-brand-navy/15"
           @submit.prevent="saveService"
         >
-          <p class="text-sm font-medium text-slate-700">
+          <p class="text-sm font-bold text-brand-navy">
             {{ editingId ? 'Hizmeti düzenle' : 'Yeni hizmet' }}
           </p>
 
@@ -348,7 +353,7 @@ onMounted(async () => {
             <button
               type="submit"
               :disabled="savingService"
-              class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              class="rounded-lg bg-brand-blue px-4 py-2 font-semibold text-white transition hover:bg-brand-blue-dark disabled:opacity-50"
             >
               {{ savingService ? 'Kaydediliyor…' : 'Kaydet' }}
             </button>
