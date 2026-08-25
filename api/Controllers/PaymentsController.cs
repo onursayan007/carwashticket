@@ -1,4 +1,5 @@
 using CarWashTicket.Api.Data;
+using CarWashTicket.Api.Dtos;
 using CarWashTicket.Api.Entities;
 using CarWashTicket.Api.Orders;
 using CarWashTicket.Api.Payments;
@@ -18,8 +19,61 @@ public class PaymentsController(
     IPaymentProvider paymentProvider,
     OrderService orderService,
     IConfiguration configuration,
+    IHostEnvironment environment,
     ILogger<PaymentsController> logger) : ControllerBase
 {
+    // Sahte 3DS ekranının sonucu. SADECE Development'ta açık: bu uç kimlik
+    // doğrulaması istemeden siparişi ödenmiş yapabildiği için canlıda bulunmamalı.
+    [HttpPost("mock-callback")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<ActionResult<MockCallbackResponse>> MockCallback(
+        MockCallbackRequest request,
+        CancellationToken ct)
+    {
+        if (!environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
+        // Sipariş, StartCheckout sırasında yazılan sağlayıcı referansından bulunuyor.
+        var order = await db.Orders
+            .AsNoTracking()
+            .Where(o => o.ProviderPaymentId == request.ProviderRef)
+            .Select(o => new { o.Id, o.Amount })
+            .FirstOrDefaultAsync(ct);
+
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        var succeeded = string.Equals(request.Outcome, "success", StringComparison.OrdinalIgnoreCase);
+
+        if (!succeeded)
+        {
+            await orderService.MarkPaymentFailedAsync(order.Id, "Kullanıcı ödemeyi reddetti (mock).", ct);
+
+            logger.LogInformation("Mock 3DS reddedildi. Sipariş {OrderId}", order.Id);
+
+            return Ok(new MockCallbackResponse(order.Id, "Failed"));
+        }
+
+        // Gerçek akıştaki webhook ile aynı yol: durum geçişi, bilet üretimi
+        // ve defter kayıtları tek transaction'da.
+        var outcome = await orderService.ConfirmPaymentAsync(
+            order.Id, request.ProviderRef, order.Amount, ct);
+
+        logger.LogInformation(
+            "Mock 3DS onaylandı. Sipariş {OrderId}, sonuç: {Outcome}", order.Id, outcome);
+
+        return Ok(new MockCallbackResponse(
+            order.Id,
+            outcome is PaymentConfirmationOutcome.Confirmed
+                or PaymentConfirmationOutcome.AlreadyConfirmed
+                ? "Paid"
+                : outcome.ToString()));
+    }
+
     // Kullanıcı 3DS ekranından döner. Burada sipariş KESİNLEŞTİRİLMEZ; ödemenin
     // gerçekten geçtiğini webhook söyler. Bu uç sadece kullanıcıyı SPA'ya yollar.
     [HttpGet("callback")]

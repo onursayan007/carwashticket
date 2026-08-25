@@ -26,13 +26,16 @@ public class MockPaymentProvider(IConfiguration configuration, ILogger<MockPayme
 
         var paymentId = $"mock_{Guid.NewGuid():N}";
 
-        // Geliştirici bu adresi tarayıcıda açıp callback akışını tetikleyebilir.
-        var redirectUrl = QueryHelpers.AddQueryString(request.CallbackUrl, new Dictionary<string, string?>
+        // Gerçek sağlayıcının 3DS sayfası yerine SPA'daki sahte kart ekranına
+        // yönlendiriyoruz. Akış aynı: kullanıcı siteden çıkar, öder, geri döner.
+        var spaBaseUrl = configuration["Spa:BaseUrl"]?.TrimEnd('/')
+                         ?? throw new InvalidOperationException("Spa:BaseUrl tanımlı değil.");
+
+        var redirectUrl = QueryHelpers.AddQueryString($"{spaBaseUrl}/mock-3ds", new Dictionary<string, string?>
         {
+            ["ref"] = paymentId,
             ["orderId"] = request.OrderId.ToString(),
-            ["paymentId"] = paymentId,
-            ["amount"] = request.Amount.ToString(CultureInfo.InvariantCulture),
-            ["status"] = "success"
+            ["amount"] = request.Amount.ToString(CultureInfo.InvariantCulture)
         });
 
         logger.LogInformation("Mock ödeme başlatıldı. Sipariş: {OrderId}", request.OrderId);

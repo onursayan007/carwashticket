@@ -32,6 +32,13 @@ const routes: RouteRecordRaw[] = [
     meta: { roles: ['Customer'] },
   },
   {
+    // Sahte 3DS ekranı: gerçek bankada olduğu gibi giriş gerektirmiyor.
+    path: '/mock-3ds',
+    name: 'mock-3ds',
+    component: () => import('@/views/MockCheckoutView.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/odeme/sonuc',
     name: 'payment-result',
     component: () => import('@/views/PaymentResultView.vue'),

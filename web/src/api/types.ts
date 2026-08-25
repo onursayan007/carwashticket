@@ -883,6 +883,7 @@ export interface components {
             status?: components["schemas"]["OrderStatus"];
             /** Format: double */
             amount?: number;
+            itemSummary?: string;
         };
         PanelOrderDto: {
             /** Format: uuid */

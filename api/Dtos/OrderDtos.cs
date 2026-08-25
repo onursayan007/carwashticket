@@ -31,4 +31,6 @@ public record CreateOrderResponse(
 public record OrderStatusResponse(
     Guid OrderId,
     OrderStatus Status,
-    decimal Amount);
+    decimal Amount,
+    // Sonuç ekranındaki özet: "2 x Su, 1 x Köpük".
+    string ItemSummary);

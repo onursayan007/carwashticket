@@ -197,7 +197,11 @@ public class OrderService(
         => db.Orders
             .AsNoTracking()
             .Where(o => o.Id == orderId && o.CustomerId == customerId)
-            .Select(o => new OrderStatusResponse(o.Id, o.Status, o.Amount))
+            .Select(o => new OrderStatusResponse(
+                o.Id,
+                o.Status,
+                o.Amount,
+                string.Join(", ", o.Items.Select(i => i.Quantity + " x " + i.ServiceName))))
             .FirstOrDefaultAsync(ct);
 
     // Ödemeyi kesinleştirir: durum Paid'e geçer, bilet üretilir, defter kayıtları
