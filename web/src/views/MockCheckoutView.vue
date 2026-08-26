@@ -82,21 +82,18 @@ async function send(outcome: 'success' | 'fail') {
 
 <template>
   <main class="min-h-dvh bg-slate-200">
-    <!-- Test uyarısı her zaman görünür, sayfayla birlikte kayar değil sabit. -->
-    <div
-      class="sticky top-0 z-10 bg-brand-sponge px-4 py-2.5 text-center text-sm font-bold text-brand-navy-dark"
-      role="alert"
-    >
-      ⚠️ TEST ORTAMI — gerçek ödeme alınmaz, kart bilgisi hiçbir yere kaydedilmez
-    </div>
-
     <div class="mx-auto max-w-md p-4">
       <div class="overflow-hidden rounded-2xl bg-white shadow-xl">
         <!-- Banka başlığı görünümü -->
         <div class="flex items-center justify-between bg-brand-navy px-5 py-4 text-white">
-          <div>
-            <p class="text-sm font-semibold">3D Secure Doğrulama</p>
-            <p class="text-xs text-white/70">Güvenli ödeme sayfası</p>
+          <div class="flex items-center gap-2">
+            <div>
+              <p class="text-sm font-semibold">3D Secure Doğrulama</p>
+              <p class="text-xs text-white/70">Güvenli ödeme sayfası</p>
+            </div>
+            <span class="rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">
+              DEMO
+            </span>
           </div>
           <span class="text-2xl" aria-hidden="true">🔒</span>
         </div>
@@ -212,18 +209,8 @@ async function send(outcome: 'success' | 'fail') {
               {{ submitting ? 'İşleniyor…' : 'Ödemeyi Onayla' }}
             </button>
 
-            <!-- Başarısız senaryoyu da görebilmek için: form geçerli olmasa da çalışır. -->
-            <button
-              type="button"
-              :disabled="submitting"
-              class="w-full rounded-lg border border-red-300 px-4 py-3 font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-40"
-              @click="send('fail')"
-            >
-              Ödemeyi Reddet
-            </button>
-
             <p class="text-center text-xs text-slate-400">
-              Girilen kart bilgileri sunucuya gönderilmez.
+              Demo ortamı — kart bilgileri sunucuya gönderilmez.
             </p>
           </form>
         </template>

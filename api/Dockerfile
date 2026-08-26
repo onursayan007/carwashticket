@@ -12,11 +12,12 @@ RUN dotnet publish api/CarWashTicket.Api.csproj -c Release -o /app --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-# Root olarak çalışmaya gerek yok.
-RUN useradd --uid 1001 --create-home app
-USER app
+# Kaynak disk (exFAT) dosyaları 700 izinle veriyor ve bu izin yayın çıktısına
+# taşınıyor. --chown olmadan root olmayan kullanıcı appsettings.json'ı okuyamıyor.
+COPY --from=build --chown=app:app /app .
 
-COPY --from=build /app .
+# aspnet imajı root olmayan "app" kullanıcısıyla geliyor, onu kullanıyoruz.
+USER app
 
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "CarWashTicket.Api.dll"]
