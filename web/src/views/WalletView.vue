@@ -119,7 +119,71 @@ onMounted(async () => {
         Henüz biletiniz yok.
       </p>
 
-      <!-- Değerlendirme bekleyenler -->
+      <template v-if="!loading && !error && tickets.length > 0">
+        <section>
+          <h2 class="mb-2 text-sm font-bold text-brand-navy">Aktif biletler</h2>
+
+          <p v-if="activeTickets.length === 0" class="text-sm text-slate-500">
+            Kullanılabilir biletiniz yok.
+          </p>
+
+          <ul v-else class="space-y-2">
+            <li
+              v-for="ticket in activeTickets"
+              :key="ticket.id"
+              class="overflow-hidden rounded-xl bg-white ring-1 ring-brand-navy/15"
+            >
+              <button
+                type="button"
+                class="flex w-full items-start justify-between gap-4 p-4 text-left"
+                :aria-expanded="openTicketId === ticket.id"
+                @click="toggle(ticket.id)"
+              >
+                <span class="min-w-0">
+                  <span class="block font-semibold text-brand-navy">{{ ticket.serviceName }}</span>
+                  <span class="mt-0.5 block text-sm text-slate-500">{{ ticket.stationName }}</span>
+                  <span class="mt-1 block text-xs text-slate-400">
+                    Son kullanım: {{ date.format(new Date(ticket.expiresAt)) }}
+                  </span>
+                </span>
+                <span class="shrink-0 text-sm font-semibold text-slate-900">
+                  {{ money.format(ticket.amount) }}
+                </span>
+              </button>
+
+              <div
+                v-if="openTicketId === ticket.id"
+                class="flex flex-col items-center gap-3 border-t border-slate-100 bg-slate-50 p-6"
+              >
+                <QrcodeVue :value="ticket.code" :size="220" level="Q" render-as="svg" />
+                <p class="text-center text-xs text-slate-500">
+                  Bu kodu yıkama noktasındaki personele veya cihaza okutun.
+                </p>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="pastTickets.length > 0">
+          <h2 class="mb-2 text-sm font-medium text-slate-700">Geçmiş</h2>
+
+          <ul class="space-y-2">
+            <li
+              v-for="ticket in pastTickets"
+              :key="ticket.id"
+              class="flex items-start justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200 opacity-60"
+            >
+              <span class="min-w-0">
+                <span class="block font-semibold text-brand-navy">{{ ticket.serviceName }}</span>
+                <span class="mt-0.5 block text-sm text-slate-500">{{ ticket.stationName }}</span>
+              </span>
+              <span class="shrink-0 text-xs text-slate-500">{{ statusLabel(ticket) }}</span>
+            </li>
+          </ul>
+        </section>
+      </template>
+
+      <!-- Biletlerden sonra: önce elindekini gör, sonra geçmişi değerlendir. -->
       <section v-if="pending.length > 0 || thanks">
         <h2 class="mb-2 text-sm font-bold text-brand-navy">Deneyiminizi paylaşın</h2>
 
@@ -178,70 +242,6 @@ onMounted(async () => {
           </li>
         </ul>
       </section>
-
-      <template v-if="!loading && !error && tickets.length > 0">
-        <section>
-          <h2 class="mb-2 text-sm font-bold text-brand-navy">Aktif biletler</h2>
-
-          <p v-if="activeTickets.length === 0" class="text-sm text-slate-500">
-            Kullanılabilir biletiniz yok.
-          </p>
-
-          <ul v-else class="space-y-2">
-            <li
-              v-for="ticket in activeTickets"
-              :key="ticket.id"
-              class="overflow-hidden rounded-xl bg-white ring-1 ring-brand-navy/15"
-            >
-              <button
-                type="button"
-                class="flex w-full items-start justify-between gap-4 p-4 text-left"
-                :aria-expanded="openTicketId === ticket.id"
-                @click="toggle(ticket.id)"
-              >
-                <span class="min-w-0">
-                  <span class="block font-semibold text-brand-navy">{{ ticket.serviceName }}</span>
-                  <span class="mt-0.5 block text-sm text-slate-500">{{ ticket.stationName }}</span>
-                  <span class="mt-1 block text-xs text-slate-400">
-                    Son kullanım: {{ date.format(new Date(ticket.expiresAt)) }}
-                  </span>
-                </span>
-                <span class="shrink-0 text-sm font-semibold text-slate-900">
-                  {{ money.format(ticket.amount) }}
-                </span>
-              </button>
-
-              <div
-                v-if="openTicketId === ticket.id"
-                class="flex flex-col items-center gap-3 border-t border-slate-100 bg-slate-50 p-6"
-              >
-                <QrcodeVue :value="ticket.code" :size="220" level="Q" render-as="svg" />
-                <p class="text-center text-xs text-slate-500">
-                  Bu kodu yıkama noktasındaki personele okutun.
-                </p>
-              </div>
-            </li>
-          </ul>
-        </section>
-
-        <section v-if="pastTickets.length > 0">
-          <h2 class="mb-2 text-sm font-medium text-slate-700">Geçmiş</h2>
-
-          <ul class="space-y-2">
-            <li
-              v-for="ticket in pastTickets"
-              :key="ticket.id"
-              class="flex items-start justify-between gap-4 rounded-xl bg-white p-4 ring-1 ring-slate-200 opacity-60"
-            >
-              <span class="min-w-0">
-                <span class="block font-semibold text-brand-navy">{{ ticket.serviceName }}</span>
-                <span class="mt-0.5 block text-sm text-slate-500">{{ ticket.stationName }}</span>
-              </span>
-              <span class="shrink-0 text-xs text-slate-500">{{ statusLabel(ticket) }}</span>
-            </li>
-          </ul>
-        </section>
-      </template>
     </div>
   </main>
 </template>
