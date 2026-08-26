@@ -87,6 +87,16 @@ export type ServiceKind = Schemas['ServiceKind']
 
 export type OrderItemRequest = Required<Schemas['OrderItemRequest']>
 
+export type PendingReviewDto = Required<Schemas['PendingReviewDto']>
+
+export type ReviewDto = Omit<Required<Schemas['ReviewDto']>, 'comment'> & {
+  comment: string | null
+}
+
+export type CreateReviewRequest = Schemas['CreateReviewRequest']
+
+export type StationRatingDto = Required<Schemas['StationRatingDto']>
+
 export type RedeemTicketRequest = Required<Schemas['RedeemTicketRequest']>
 
 export type RedeemTicketResponse = Omit<

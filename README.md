@@ -122,6 +122,14 @@ Token'ın kendisi değil **SHA-256 özeti** saklanır; veritabanı sızarsa otur
 
 > [`AuthController`](api/Controllers/AuthController.cs), [`session.ts`](web/src/api/session.ts)
 
+### Değerlendirme: türetilmiş veri asla elle güncellenmez
+
+`Station.RatingAverage` bir önbellek; her yeni yorumda `Reviews` tablosundan **yeniden hesaplanır**, üzerine eklenmez. Sipariş başına tek yorum unique index ile garanti; ikinci deneme `409` alır. Sahiplik ve durum kontrolü tek sorguda yapılır — başkasının siparişi "bulunamadı" döner, "yetkisiz" değil.
+
+Yorumlarda tam ad gösterilmez, baş harfe indirgenir (`Onur S.`).
+
+> [`ReviewsController`](api/Controllers/ReviewsController.cs)
+
 ### Tip güvenliği: şemadan üretilen istemci tipleri
 
 Frontend tipleri elle yazılmaz, backend'in Swagger şemasından üretilir (`npm run gen:api`). Backend'de bir DTO değişirse frontend **derlenmez**.
@@ -189,7 +197,7 @@ Backend DTO'ları değiştiğinde istemci tiplerini yenile: `cd web && npm run g
 Bu bir portföy projesi; ürünleşme adımlarının bir kısmı kapsam dışı bırakıldı:
 
 - **iyzico entegrasyonu yazıldı ama sandbox'ta doğrulanmadı.** `IyzicoPaymentProvider` soyutlamanın gerçek bir sağlayıcıyla nasıl kullanılacağını gösteriyor; alıcı bilgileri yer tutucu, webhook imza şeması doğrulanmadı. Canlıya çıkmadan önce test edilmeli.
-- **Değerlendirme puanları demo verisi.** `Review` tablosu şemada var, müşteri değerlendirme akışı henüz bağlanmadı.
+- **Başlangıç puanları demo verisi.** Değerlendirme akışı çalışıyor; ilk gerçek yorum geldiğinde o işyerinin puanı `Reviews` tablosundan yeniden hesaplanır ve seed değerinin yerini alır.
 - **Hakediş ödemesi (`Settled`) ve iade akışı** durum makinesinde tanımlı ama tetikleyen uç yok.
 - **Süre dolumu için arka plan işi yok** — `Expired` durumuna geçiren zamanlanmış görev eklenmedi.
 - Şifre sıfırlama, personel yönetimi, sayfalama, rate limiting.

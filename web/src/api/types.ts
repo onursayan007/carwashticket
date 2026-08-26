@@ -592,6 +592,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reviews/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PendingReviewDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateReviewRequest"];
+                    "text/json": components["schemas"]["CreateReviewRequest"];
+                    "application/*+json": components["schemas"]["CreateReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StationRatingDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stations/{stationId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stations": {
         parameters: {
             query?: never;
@@ -864,6 +995,13 @@ export interface components {
             amount?: number;
             redirectUrl?: string | null;
         };
+        CreateReviewRequest: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: int32 */
+            rating?: number;
+            comment?: string | null;
+        };
         LoginRequest: {
             /** Format: email */
             email: string;
@@ -925,6 +1063,16 @@ export interface components {
             /** Format: double */
             stationShare?: number;
         };
+        PendingReviewDto: {
+            /** Format: uuid */
+            orderId?: string;
+            /** Format: uuid */
+            stationId?: string;
+            stationName?: string;
+            itemSummary?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         ProblemDetails: {
             type?: string | null;
             title?: string | null;
@@ -950,6 +1098,16 @@ export interface components {
             email: string;
             password: string;
             fullName?: string | null;
+        };
+        ReviewDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            rating?: number;
+            comment?: string | null;
+            authorLabel?: string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         ServiceDto: {
             /** Format: uuid */
@@ -982,6 +1140,12 @@ export interface components {
             /** Format: int32 */
             ratingCount?: number;
             services?: components["schemas"]["ServiceDto"][];
+        };
+        StationRatingDto: {
+            /** Format: double */
+            average?: number;
+            /** Format: int32 */
+            count?: number;
         };
         /** @enum {string} */
         StationSort: "Nearest" | "Cheapest" | "TopRated" | "Best";

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { apiFetch, errorMessage } from '@/api/client'
+import StarRating from '@/components/StarRating.vue'
 import { serviceLook } from '@/serviceLook'
-import type { CreateOrderResponse, ServiceDto, StationDetailDto } from '@/types'
+import type { CreateOrderResponse, ReviewDto, ServiceDto, StationDetailDto } from '@/types'
 
 const props = defineProps<{ id: string }>()
 
@@ -60,7 +61,16 @@ function setQuantity(service: ServiceDto, next: number) {
   }
 }
 
+const reviews = ref<ReviewDto[]>([])
+
+const reviewDate = new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' })
+
 onMounted(async () => {
+  // Yorumlar gelmezse sayfa yine çalışsın; ikisi ayrı istek.
+  apiFetch<ReviewDto[]>(`/api/stations/${props.id}/reviews`)
+    .then((result) => (reviews.value = result))
+    .catch(() => (reviews.value = []))
+
   try {
     station.value = await apiFetch<StationDetailDto>(`/api/stations/${props.id}`)
   } catch (err) {
@@ -254,6 +264,31 @@ async function startCheckout() {
         <p v-if="station.services.length === 0" class="py-8 text-center text-sm text-slate-500">
           Bu işyerinde tanımlı hizmet yok.
         </p>
+
+        <!-- Değerlendirmeler -->
+        <section v-if="reviews.length > 0">
+          <h3 class="mb-2 text-sm font-bold text-brand-navy">Değerlendirmeler</h3>
+
+          <ul class="space-y-2">
+            <li
+              v-for="review in reviews"
+              :key="review.id"
+              class="rounded-xl border border-brand-navy/15 bg-white p-3"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <StarRating :model-value="review.rating" readonly />
+                <span class="text-xs text-slate-400">
+                  {{ reviewDate.format(new Date(review.createdAt)) }}
+                </span>
+              </div>
+
+              <p v-if="review.comment" class="mt-2 text-sm text-slate-700">
+                {{ review.comment }}
+              </p>
+              <p class="mt-1 text-xs font-medium text-slate-500">{{ review.authorLabel }}</p>
+            </li>
+          </ul>
+        </section>
       </div>
     </div>
 

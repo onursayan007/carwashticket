@@ -2,7 +2,8 @@
 import QrcodeVue from 'qrcode.vue'
 import { computed, onMounted, ref } from 'vue'
 import { apiFetch, errorMessage } from '@/api/client'
-import type { TicketListItemDto } from '@/types'
+import StarRating from '@/components/StarRating.vue'
+import type { PendingReviewDto, StationRatingDto, TicketListItemDto } from '@/types'
 
 const tickets = ref<TicketListItemDto[]>([])
 const error = ref<string | null>(null)
@@ -32,6 +33,52 @@ function toggle(id: string) {
   openTicketId.value = openTicketId.value === id ? null : id
 }
 
+// --- Değerlendirme ---
+const pending = ref<PendingReviewDto[]>([])
+const ratings = ref<Record<string, number>>({})
+const comments = ref<Record<string, string>>({})
+const sending = ref<string | null>(null)
+const reviewError = ref<string | null>(null)
+const thanks = ref<string | null>(null)
+
+async function loadPending() {
+  try {
+    pending.value = await apiFetch<PendingReviewDto[]>('/api/reviews/pending')
+  } catch {
+    // Değerlendirme listesi gelmezse cüzdan yine çalışsın.
+    pending.value = []
+  }
+}
+
+async function submitReview(order: PendingReviewDto) {
+  const rating = ratings.value[order.orderId]
+
+  if (!rating || sending.value) {
+    return
+  }
+
+  sending.value = order.orderId
+  reviewError.value = null
+
+  try {
+    const result = await apiFetch<StationRatingDto>('/api/reviews', {
+      method: 'POST',
+      body: {
+        orderId: order.orderId,
+        rating,
+        comment: comments.value[order.orderId]?.trim() || null,
+      },
+    })
+
+    thanks.value = `${order.stationName} için puanınız kaydedildi (yeni ortalama ${result.average.toFixed(1)}).`
+    pending.value = pending.value.filter((p) => p.orderId !== order.orderId)
+  } catch (err) {
+    reviewError.value = errorMessage(err, 'Değerlendirme kaydedilemedi.')
+  } finally {
+    sending.value = null
+  }
+}
+
 onMounted(async () => {
   try {
     tickets.value = await apiFetch<TicketListItemDto[]>('/api/tickets')
@@ -40,6 +87,8 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  await loadPending()
 })
 </script>
 
@@ -63,13 +112,76 @@ onMounted(async () => {
         {{ error }}
       </p>
 
-      <p v-else-if="tickets.length === 0" class="py-8 text-center text-sm text-slate-500">
+      <p
+        v-else-if="tickets.length === 0 && pending.length === 0"
+        class="py-8 text-center text-sm text-slate-500"
+      >
         Henüz biletiniz yok.
       </p>
 
-      <template v-else>
+      <!-- Değerlendirme bekleyenler -->
+      <section v-if="pending.length > 0 || thanks">
+        <h2 class="mb-2 text-sm font-bold text-brand-navy">Deneyiminizi paylaşın</h2>
+
+        <p
+          v-if="thanks"
+          class="mb-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-brand-green"
+          role="status"
+        >
+          {{ thanks }}
+        </p>
+
+        <p
+          v-if="reviewError"
+          class="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+          role="alert"
+        >
+          {{ reviewError }}
+        </p>
+
+        <ul class="space-y-2">
+          <li
+            v-for="order in pending"
+            :key="order.orderId"
+            class="rounded-xl bg-white p-4 ring-1 ring-brand-navy/15"
+          >
+            <p class="font-semibold text-brand-navy">{{ order.stationName }}</p>
+            <p class="mt-0.5 text-xs text-slate-500">{{ order.itemSummary }}</p>
+
+            <div class="mt-3 flex items-center gap-3">
+              <StarRating
+                :model-value="ratings[order.orderId] ?? 0"
+                @update:model-value="ratings[order.orderId] = $event"
+              />
+              <span class="text-xs text-slate-400">
+                {{ ratings[order.orderId] ? `${ratings[order.orderId]}/5` : 'Puan verin' }}
+              </span>
+            </div>
+
+            <div v-if="ratings[order.orderId]" class="mt-3 space-y-2">
+              <input
+                v-model="comments[order.orderId]"
+                type="text"
+                maxlength="1000"
+                placeholder="Yorumunuz (isteğe bağlı)"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              />
+              <button
+                type="button"
+                :disabled="sending === order.orderId"
+                class="w-full rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-blue-dark disabled:opacity-50"
+                @click="submitReview(order)"
+              >
+                {{ sending === order.orderId ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder' }}
+              </button>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <template v-if="!loading && !error && tickets.length > 0">
         <section>
-          <h2 class="mb-2 text-sm font-medium text-slate-700">Aktif biletler</h2>
+          <h2 class="mb-2 text-sm font-bold text-brand-navy">Aktif biletler</h2>
 
           <p v-if="activeTickets.length === 0" class="text-sm text-slate-500">
             Kullanılabilir biletiniz yok.

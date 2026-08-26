@@ -100,6 +100,13 @@ async function onSubmit() {
         {{ submitting ? 'Giriş yapılıyor…' : 'Giriş yap' }}
       </button>
 
+      <p class="text-center text-sm text-slate-500">
+        Hesabın yok mu?
+        <RouterLink :to="{ name: 'register' }" class="font-semibold text-brand-blue">
+          Hesap oluştur
+        </RouterLink>
+      </p>
+
       <div class="border-t border-slate-200 pt-4">
         <p class="mb-2 text-center text-xs font-medium text-slate-500">
           Demo hesabıyla dene
