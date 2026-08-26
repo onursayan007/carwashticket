@@ -13,6 +13,10 @@ RG="${RG:-carwash-rg}"
 LOC="${LOC:-westeurope}"
 APP="${APP:-carwash}"
 
+# Öğrenci aboneliklerinde bazı bölgeler kapalı olabiliyor ("location is restricted").
+# Sırayla denenir, ilk açık olan kullanılır.
+REGIONS="${REGIONS:-northeurope swedencentral germanywestcentral francecentral uksouth westeurope eastus}"
+
 # Postgres sunucu adı Azure genelinde benzersiz olmalı.
 PG_SERVER="${PG_SERVER:-carwash-pg-$RANDOM$RANDOM}"
 PG_USER="carwashadmin"
@@ -48,20 +52,39 @@ if [ -n "$EXISTING_PG" ]; then
   say "PostgreSQL zaten var: $PG_SERVER (şifre yenileniyor)"
   az postgres flexible-server update -g "$RG" -n "$PG_SERVER" --admin-password "$PG_PASS" -o none
 else
-  say "PostgreSQL: $PG_SERVER (birkaç dakika sürer)"
   # --database-name yeni CLI'de yalnızca elastic cluster'da geçerli; veritabanını ayrıca açıyoruz.
-  az postgres flexible-server create \
-    --resource-group "$RG" \
-    --name "$PG_SERVER" \
-    --location "$LOC" \
-    --tier Burstable \
-    --sku-name Standard_B1ms \
-    --storage-size 32 \
-    --version 17 \
-    --admin-user "$PG_USER" \
-    --admin-password "$PG_PASS" \
-    --public-access 0.0.0.0 \
-    --yes -o none
+  CREATED=""
+
+  for region in $REGIONS; do
+    say "PostgreSQL deneniyor: $region (birkaç dakika sürer)"
+
+    if az postgres flexible-server create \
+        --resource-group "$RG" \
+        --name "$PG_SERVER" \
+        --location "$region" \
+        --tier Burstable \
+        --sku-name Standard_B1ms \
+        --storage-size 32 \
+        --version 17 \
+        --admin-user "$PG_USER" \
+        --admin-password "$PG_PASS" \
+        --public-access 0.0.0.0 \
+        --yes -o none 2>/tmp/pg_error; then
+      LOC="$region"
+      CREATED="evet"
+      echo "  $region uygun."
+      break
+    fi
+
+    echo "  $region olmadı: $(tail -1 /tmp/pg_error | cut -c1-90)"
+  done
+
+  if [ -z "$CREATED" ]; then
+    echo
+    echo "Hiçbir bölgede PostgreSQL açılamadı. Denenen: $REGIONS"
+    echo "Farklı bölge denemek için: REGIONS=\"japaneast eastus2\" ./deploy-azure.sh"
+    exit 1
+  fi
 fi
 
 say "Veritabanı: $PG_DB"
@@ -70,9 +93,20 @@ az postgres flexible-server db create -g "$RG" -s "$PG_SERVER" -d "$PG_DB" -o no
 
 PG_HOST="$PG_SERVER.postgres.database.azure.com"
 
-say "Container Apps ortamı"
-az containerapp env show -g "$RG" -n "$APP-env" -o none 2>/dev/null \
-  || az containerapp env create -g "$RG" -n "$APP-env" -l "$LOC" -o none
+# Uygulama veritabanıyla aynı bölgede olsun; gecikme düşer.
+say "Container Apps ortamı ($LOC)"
+if ! az containerapp env show -g "$RG" -n "$APP-env" -o none 2>/dev/null; then
+  az containerapp env create -g "$RG" -n "$APP-env" -l "$LOC" -o none 2>/tmp/env_error || {
+    echo "  $LOC olmadı, alternatif bölgeler deneniyor..."
+
+    for region in $REGIONS; do
+      az containerapp env create -g "$RG" -n "$APP-env" -l "$region" -o none 2>/dev/null && {
+        echo "  $region uygun."
+        break
+      }
+    done
+  }
+fi
 
 # --- Uygulama tanımı ---------------------------------------------------------
 # Tek app içinde iki konteyner: nginx dışarı bakar, API sadece localhost'ta.
