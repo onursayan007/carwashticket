@@ -8,11 +8,11 @@ Tek **Container App** içinde iki konteyner:
 
 ```
 İnternet ──HTTPS──> Container App (tek ingress)
-                      ├── nginx      : SPA'yı sunar, /api'yi localhost:8080'e geçirir
-                      └── api        : ASP.NET Core, dışarı kapalı
-                                          │
-                                          ▼
-                            Azure Database for PostgreSQL
+                      ├── web (nginx) : SPA'yı sunar, /api'yi localhost:8080'e geçirir
+                      └── api         : ASP.NET Core, dışarı kapalı
+                                           │
+                                           ▼
+                             Azure Database for PostgreSQL
 ```
 
 Aynı Container App içindeki konteynerler `localhost` paylaşır. Bu yüzden yerelde
@@ -22,8 +22,6 @@ ortam değişkeniyle ayarlanıyor.
 **Neden tek app:** SPA ve API aynı origin'de kalıyor. CORS yok, çerez `SameSite=Lax`
 ile çalışıyor, Azure ücretsiz HTTPS veriyor.
 
----
-
 ## Maliyet
 
 | Servis | Ücretsiz kapsam | Sonrası |
@@ -32,21 +30,41 @@ ile çalışıyor, Azure ücretsiz HTTPS veriyor.
 | PostgreSQL Flexible Server (B1ms) | Yeni hesaplarda 12 ay ücretsiz | ~13 $/ay |
 | GitHub Container Registry | Genel imajlar ücretsiz | — |
 
-Öğrenci aboneliğinde 100 $ kredi var ve kredi kartı istemiyor. Kredi biterse
-kaynaklar durur, sürpriz fatura gelmez.
-
-> ACR (Azure Container Registry) yerine **ghcr.io** kullanıyoruz — Basic ACR ayda
-> ~5 $ tutuyor, genel imajlar için gereksiz.
+Öğrenci aboneliğinde 100 $ kredi var, kredi kartı istemiyor. Kredi biterse kaynaklar
+durur, sürpriz fatura gelmez.
 
 ---
 
-## 1. Hazırlık
+## 1. İmajlar (GitHub yapıyor)
+
+İmajlar `.github/workflows/publish.yml` ile **her push'ta otomatik** derlenip
+`ghcr.io`'ya gönderiliyor. Yerelde `docker build` / `docker push` yapmana gerek yok.
+
+Tek gereken: harita anahtarını GitHub'a secret olarak eklemek.
+
+```
+GitHub → repo → Settings → Secrets and variables → Actions → New repository secret
+  Name:  MAPTILER_KEY
+  Value: <maptiler anahtarın>
+```
+
+Secret eklemeden de çalışır ama harita düşük detaylı demo katmanına düşer.
+
+Push'tan sonra Actions sekmesinden "İmajları yayınla" işinin yeşil olduğunu gör, sonra:
+
+```
+GitHub → repo → Packages → carwash-api  → Package settings → Change visibility → Public
+GitHub → repo → Packages → carwash-web  → Package settings → Change visibility → Public
+```
+
+İmajlar **public** olmalı, yoksa Container Apps çekemez.
+
+---
+
+## 2. Azure hazırlığı
 
 ```bash
-# Azure CLI (macOS)
-curl -sL https://aka.ms/InstallAzureCLIDeb | bash   # Linux
-brew install azure-cli                              # macOS (Homebrew varsa)
-
+brew install azure-cli          # macOS
 az login
 az account set --subscription "<abonelik-adı>"
 
@@ -56,22 +74,19 @@ az provider register --namespace Microsoft.OperationalInsights
 ```
 
 ```bash
-# Değişkenler — bir kez ayarla, sonraki komutlar bunları kullanır
 RG=carwash-rg
 LOC=westeurope
 APP=carwash
-PGSERVER=carwash-pg-$RANDOM      # global benzersiz olmalı
+PGSERVER=carwash-pg-$RANDOM        # global benzersiz olmalı
 PGPASS='<güçlü-bir-şifre>'
-GHUSER=onursayan007
-```
+GHUSER=<github-kullanıcı-adın>
 
-```bash
 az group create --name $RG --location $LOC
 ```
 
 ---
 
-## 2. Veritabanı
+## 3. Veritabanı
 
 ```bash
 az postgres flexible-server create \
@@ -89,58 +104,30 @@ az postgres flexible-server create \
   --yes
 ```
 
-`--public-access 0.0.0.0` yalnızca **Azure servislerine** izin verir, internete
-açmaz. Container App bu sayede bağlanabilir.
-
----
-
-## 3. İmajları yayınla
-
-GitHub Container Registry'ye push edeceğiz. Önce `write:packages` yetkili bir
-token gerekiyor:
-
-```bash
-echo "<github-token>" | docker login ghcr.io -u $GHUSER --password-stdin
-
-# API
-docker build -f api/Dockerfile -t ghcr.io/$GHUSER/carwash-api:latest .
-docker push ghcr.io/$GHUSER/carwash-api:latest
-
-# Web — MapTiler anahtarı derleme anında gömülür
-docker build -f web/Dockerfile \
-  --build-arg VITE_API_BASE_URL="" \
-  --build-arg VITE_MAPTILER_KEY="<maptiler-anahtarı>" \
-  -t ghcr.io/$GHUSER/carwash-web:latest .
-docker push ghcr.io/$GHUSER/carwash-web:latest
-```
-
-İmajları **public** yap (GitHub → Packages → Package settings → Change visibility),
-yoksa Container Apps çekemez.
+`--public-access 0.0.0.0` yalnızca **Azure servislerine** izin verir, internete açmaz.
 
 ---
 
 ## 4. Container App
 
 ```bash
-az containerapp env create \
-  --resource-group $RG \
-  --name $APP-env \
-  --location $LOC
+az containerapp env create -g $RG -n $APP-env -l $LOC
 ```
 
-Aşağıdaki dosyayı `containerapp.yaml` adıyla kaydet ve `<...>` yerlerini doldur:
+Önce ingress'siz oluşturup FQDN'i öğreniyoruz, sonra adres içeren ayarları
+güncelliyoruz. `containerapp.yaml` dosyasını oluştur:
 
 ```yaml
 properties:
   configuration:
     ingress:
       external: true
-      targetPort: 80          # nginx
+      targetPort: 80
       transport: auto
   template:
     containers:
       - name: web
-        image: ghcr.io/<kullanici>/carwash-web:latest
+        image: ghcr.io/<GHUSER>/carwash-web:latest
         env:
           # Aynı app içinde konteynerler localhost paylaşıyor
           - name: API_UPSTREAM
@@ -148,14 +135,14 @@ properties:
         resources: { cpu: 0.25, memory: 0.5Gi }
 
       - name: api
-        image: ghcr.io/<kullanici>/carwash-api:latest
+        image: ghcr.io/<GHUSER>/carwash-api:latest
         env:
           - name: ASPNETCORE_ENVIRONMENT
             value: Development          # seed verisi + Swagger + mock ödeme
           - name: ASPNETCORE_URLS
             value: http://+:8080
           - name: ConnectionStrings__Postgres
-            value: "Host=<pgserver>.postgres.database.azure.com;Database=carwashticket;Username=carwashadmin;Password=<sifre>;SslMode=Require"
+            value: "Host=<PGSERVER>.postgres.database.azure.com;Database=carwashticket;Username=carwashadmin;Password=<PGPASS>;SslMode=Require"
           - name: Database__MigrateOnStartup
             value: "true"
           - name: Jwt__Key
@@ -168,75 +155,82 @@ properties:
             value: "true"               # Azure HTTPS veriyor
           - name: Auth__RefreshCookieSameSite
             value: Lax
-          - name: Spa__BaseUrl
-            value: "https://<app-fqdn>"
           - name: Payment__UseMock
             value: "true"
           - name: Payment__CommissionRate
             value: "0.10"
-          - name: Payment__CallbackUrl
-            value: "https://<app-fqdn>/api/payments/callback"
         resources: { cpu: 0.5, memory: 1.0Gi }
 
     scale:
-      minReplicas: 0          # kullanılmadığında sıfıra iner, kredi yakmaz
+      minReplicas: 0        # kullanılmadığında uyur, kredi yakmaz
       maxReplicas: 1
 ```
 
 ```bash
-az containerapp create \
-  --resource-group $RG \
-  --name $APP \
-  --environment $APP-env \
-  --yaml containerapp.yaml
+az containerapp create -g $RG -n $APP --environment $APP-env --yaml containerapp.yaml
 ```
 
-Adresi öğren:
-
-```bash
-az containerapp show -g $RG -n $APP --query properties.configuration.ingress.fqdn -o tsv
-```
-
-`Spa__BaseUrl` ve `Payment__CallbackUrl` bu adresi içermeli. İlk oluşturmada FQDN
-bilinmediği için app'i kurduktan sonra bir kez güncelle:
+Adresi öğren ve adres içeren iki ayarı ver:
 
 ```bash
 FQDN=$(az containerapp show -g $RG -n $APP --query properties.configuration.ingress.fqdn -o tsv)
+echo "https://$FQDN"
 
 az containerapp update -g $RG -n $APP \
-  --set-env-vars "Spa__BaseUrl=https://$FQDN" "Payment__CallbackUrl=https://$FQDN/api/payments/callback"
+  --set-env-vars "Spa__BaseUrl=https://$FQDN" \
+                 "Payment__CallbackUrl=https://$FQDN/api/payments/callback" \
+                 "Cors__AllowedOrigins__0=https://$FQDN"
 ```
+
+> `Spa__BaseUrl` sahte 3DS ekranına yönlendirmek için kullanılıyor; boş kalırsa
+> ödeme akışı hata verir.
 
 ---
 
 ## 5. Kontrol
 
 ```bash
-curl -s "https://$FQDN/api/stations" -o /dev/null -w "%{http_code}\n"   # 401 beklenir (giriş yok)
+curl -s -o /dev/null -w "%{http_code}\n" "https://$FQDN"                # 200
+curl -s -o /dev/null -w "%{http_code}\n" "https://$FQDN/api/stations"   # 401 (giriş yok)
 open "https://$FQDN"
 ```
 
-Demo hesaplarıyla gir (README'deki tablo). Seed verisi ilk açılışta yüklenir.
+Giriş ekranındaki demo butonlarıyla dene. Seed verisi (88 yıkama noktası) ilk
+açılışta otomatik yüklenir.
+
+---
+
+## Güncelleme
+
+Kod değiştiğinde:
+
+```bash
+git push                                    # Actions yeni imajı yayınlar
+az containerapp update -g $RG -n $APP \
+  --set-env-vars "REDEPLOY=$(date +%s)"     # yeni imajı çekmesi için tetikler
+```
+
+`:latest` etiketi aynı kaldığı için Container Apps kendiliğinden yeni imajı çekmez;
+revizyonu tetiklemek gerekir. Daha sağlıklısı imajı `:${{ github.sha }}` etiketiyle
+sabitleyip `--image` ile güncellemek.
 
 ---
 
 ## Dikkat edilecekler
 
 **`minReplicas: 0`** — uzun süre kullanılmazsa konteyner uyur, ilk istek 10-20 sn
-sürer. Demoyu göstereceğin gün bir kez ısıtman iyi olur. Krediyi korumak için
-bilerek böyle.
+sürer. Demoyu göstereceğin gün bir kez ısıt. Krediyi korumak için bilerek böyle.
 
-**`ASPNETCORE_ENVIRONMENT=Development`** — demo için gerekli: seed verisi, Swagger
-ve sahte 3DS ödeme ekranı bu ortamda açılıyor. Gerçek bir üründe bu asla
-`Development` olmaz.
+**`ASPNETCORE_ENVIRONMENT=Development`** — demo için gerekli: seed verisi, Swagger ve
+sahte 3DS ekranı bu ortamda açılıyor. Bunun bedeli: `mock-callback` ucu internete açık
+ve kimlik doğrulaması istemeden siparişi "ödenmiş" yapabiliyor. Portföy demosu için
+kabul edilebilir, gerçek para dönen bir üründe asla olmaz.
 
-**`Jwt__Key`** düz metin env olarak duruyor. Ciddi bir dağıtımda Azure Key Vault
-veya Container Apps secret kullanılmalı:
+**`Jwt__Key`** düz metin duruyor. Ciddi bir dağıtımda secret kullan:
 
 ```bash
 az containerapp secret set -g $RG -n $APP --secrets jwt-key="<anahtar>"
-# ardından env'de: secretRef: jwt-key
+# yaml'da: secretRef: jwt-key
 ```
 
-**Veritabanı yedeği yok.** Demo verisi zaten seed'den geliyor; silinirse yeniden
-oluşur.
+**Veritabanı yedeği yok.** Demo verisi seed'den geliyor; silinirse yeniden oluşur.
