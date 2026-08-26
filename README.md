@@ -192,6 +192,13 @@ Backend DTO'ları değiştiğinde istemci tiplerini yenile: `cd web && npm run g
 
 ---
 
+## Dağıtım
+
+Azure Container Apps + PostgreSQL Flexible Server ile adım adım:
+**[DEPLOY-AZURE.md](DEPLOY-AZURE.md)**
+
+---
+
 ## Bilinçli olarak yapılmayanlar
 
 Bu bir portföy projesi; ürünleşme adımlarının bir kısmı kapsam dışı bırakıldı:

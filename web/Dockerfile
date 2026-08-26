@@ -17,7 +17,13 @@ ENV VITE_MAPTILER_KEY=$VITE_MAPTILER_KEY
 RUN npm run build
 
 FROM nginx:alpine
-COPY web/nginx.conf /etc/nginx/conf.d/default.conf
+
+# nginx:alpine açılışta templates/ altını envsubst'ten geçirip conf.d'ye yazar.
+# FILTER olmazsa $host, $remote_addr gibi nginx değişkenleri de silinir.
+ENV API_UPSTREAM=api:8080
+ENV NGINX_ENVSUBST_FILTER=API_UPSTREAM
+
+COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /src/dist /usr/share/nginx/html
 
 EXPOSE 80
