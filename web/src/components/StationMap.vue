@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
 // maplibre worker'ının adresini kendi paket chunk'ından türetiyor; paketlendikten
 // sonra o adres yanlış oluyor ve worker 404 alıyor. Worker açılmayınca tile'lar
 // ayrıştırılamıyor: zemin çizilir, üstünde hiçbir veri görünmez.
