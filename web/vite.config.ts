@@ -17,6 +17,18 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['maplibre-gl'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // maplibre kendi adıyla ayrı parçaya alınmazsa Rollup paylaşılan parçayı
+        // worker dosyasının adıyla adlandırıyor; setWorkerUrl o zaman worker yerine
+        // kütüphanenin tamamını başlatıyor ve harita hiç çizilmiyor.
+        manualChunks: {
+          maplibre: ['maplibre-gl'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
   },

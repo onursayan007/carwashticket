@@ -44,6 +44,14 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # nginx'in mime tablosunda .mjs yok; modül olarak yüklenen worker
+    # application/octet-stream ile gelirse tarayıcı çalıştırmayı reddeder.
+    location ~ \.mjs$ {
+        default_type application/javascript;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
     # Hash'li varlıklar uzun süre önbelleklenebilir.
     location /assets/ {
         expires 1y;
