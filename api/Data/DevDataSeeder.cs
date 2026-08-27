@@ -9,8 +9,23 @@ public static class DevDataSeeder
 {
     private const string DemoPassword = "Demo123!";
 
-    // İşyeri ve personel demo hesabının bağlandığı istasyon.
-    private const string DemoStationName = "Petrol Ofisi Karyağdı";
+    // İşyeri paneli tek istasyon bekliyor; demo işyeri sahibi buraya bağlı.
+    private const string DemoBusinessStation = "Petrol Ofisi Karyağdı";
+
+    // QR okuyucu birden fazla istasyonda görevli olabilir. Demoda üç ilçeye
+    // yayılmış istasyonlara bağlıyoruz ki nereye bakarsan bak bilet okutulabilsin.
+    private static readonly string[] DemoScannerStations =
+    [
+        "Petrol Ofisi Karyağdı",
+        "Opet Elmalı",
+        "Opet (Sakarya Blv.)",
+        "Petrol Ofisi (Sakarya Blv.)",
+        "Shell (Sakarya Blv.)",
+        "Petrol Ofisi (Fevzi Çakmak)",
+        "Opet (Etiler)",
+        "Petrol Ofisi (Meydankavağı)",
+        "Total (Etiler)"
+    ];
 
     public static async Task SeedAsync(IServiceProvider services)
     {
@@ -74,24 +89,26 @@ public static class DevDataSeeder
         var business = await CreateUserAsync(userManager, "isyeri@test.com", "İşyeri Sahibi", Roles.Business, now);
         await CreateUserAsync(userManager, "admin@test.com", "Platform Yöneticisi", Roles.Admin, now);
 
-        // Panel tek istasyon bekliyor; demo hesapları tek işyerine bağlı.
-        var demoStation = stations.First(s => s.Name == DemoStationName);
+        var businessStation = stations.First(s => s.Name == DemoBusinessStation);
+
+        db.StationStaff.Add(new StationStaff
+        {
+            StationId = businessStation.Id,
+            UserId = business.Id,
+            Role = StationRole.Business,
+            AssignedAt = now
+        });
 
         db.StationStaff.AddRange(
-            new StationStaff
-            {
-                StationId = demoStation.Id,
-                UserId = staff.Id,
-                Role = StationRole.Scanner,
-                AssignedAt = now
-            },
-            new StationStaff
-            {
-                StationId = demoStation.Id,
-                UserId = business.Id,
-                Role = StationRole.Business,
-                AssignedAt = now
-            });
+            stations
+                .Where(s => DemoScannerStations.Contains(s.Name))
+                .Select(s => new StationStaff
+                {
+                    StationId = s.Id,
+                    UserId = staff.Id,
+                    Role = StationRole.Scanner,
+                    AssignedAt = now
+                }));
 
         await db.SaveChangesAsync();
     }
