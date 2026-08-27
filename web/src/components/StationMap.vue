@@ -22,6 +22,9 @@ setWorkerUrl(maplibreWorkerUrl)
 const container = ref<HTMLDivElement | null>(null)
 const mapError = ref<string | null>(null)
 
+// Geçici teşhis: harita boş kalırsa nerede takıldığını ekrandan okuyalım.
+const diag = ref({ style: '—', kaynak: 0, yuklendi: 0, hata: 0, son: '', boyut: '' })
+
 let map: MapLibreMap | null = null
 let resizeObserver: ResizeObserver | null = null
 let markers = new Map<string, Marker>()
@@ -120,6 +123,23 @@ onMounted(() => {
     renderMarkers()
   })
 
+  instance.on('styledata', () => {
+    diag.value.style = 'OK'
+  })
+
+  instance.on('dataloading', (event) => {
+    if (event.dataType === 'source') diag.value.kaynak += 1
+  })
+
+  instance.on('data', (event) => {
+    if (event.dataType === 'source' && event.isSourceLoaded) diag.value.yuklendi += 1
+  })
+
+  setInterval(() => {
+    const c = container.value
+    diag.value.boyut = c ? `${c.clientWidth}x${c.clientHeight}` : 'yok'
+  }, 1000)
+
   // Tile veya stil hatası sessizce boş harita bırakmasın.
   instance.on('error', (event) => {
     const error = event.error as { status?: number; message?: string } | undefined
@@ -127,6 +147,9 @@ onMounted(() => {
     mapError.value = error?.status === 403 || error?.status === 401
       ? 'Harita anahtarı reddedildi (403). MapTiler anahtarını kontrol edin.'
       : 'Harita katmanı yüklenemedi.'
+
+    diag.value.hata += 1
+    diag.value.son = `${error?.status ?? ''} ${error?.message ?? ''}`.trim().slice(0, 70)
 
     console.error('[harita]', event.error)
   })
@@ -166,6 +189,14 @@ defineExpose({
 <template>
   <div class="relative h-full w-full">
     <div ref="container" class="h-full w-full" />
+
+    <p
+      class="absolute bottom-2 left-2 z-10 rounded bg-black/80 px-2 py-1 font-mono text-[10px] leading-tight text-white"
+    >
+      stil:{{ diag.style }} kaynak:{{ diag.kaynak }} yuklendi:{{ diag.yuklendi }}
+      hata:{{ diag.hata }} boyut:{{ diag.boyut }}
+      <template v-if="diag.son"><br />{{ diag.son }}</template>
+    </p>
 
     <p
       v-if="mapError"
