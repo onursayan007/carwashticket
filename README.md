@@ -1,5 +1,8 @@
 # Araç Yıkama Bileti
 
+## Canlı Demo
+https://carwash.thankfulfield-d5ec1329.swedencentral.azurecontainerapps.io/
+
 Akaryakıt istasyonlarında ve oto yıkamacılarda **kasada sıra beklemeden** yıkama hizmeti satın alma platformu. Müşteri haritadan işyeri seçer, ödeme yapar, QR bilet alır; yıkama noktasında bilet okutulur.
 
 Çok kiracılı (multi-tenant) yazıldı: tek istasyona da kurulabilir, yüzlerce işyerine de.
