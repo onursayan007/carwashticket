@@ -38,6 +38,9 @@ public static class DevDataSeeder
 
         if (await db.Stations.AnyAsync())
         {
+            // Veri zaten var: sadece eksik kalan demo atamalarını tamamla.
+            // Seed listesi büyüdüğünde veritabanını sıfırlamak gerekmesin.
+            await EnsureScannerAssignmentsAsync(db, userManager);
             return;
         }
 
@@ -109,6 +112,47 @@ public static class DevDataSeeder
                     Role = StationRole.Scanner,
                     AssignedAt = now
                 }));
+
+        await db.SaveChangesAsync();
+    }
+
+    // Demo QR okuyucusunun görevli olduğu istasyonları tamamlar. Var olanı
+    // tekrar eklemez, bu yüzden her açılışta güvenle çalışabilir.
+    private static async Task EnsureScannerAssignmentsAsync(
+        AppDbContext db,
+        UserManager<ApplicationUser> userManager)
+    {
+        var scanner = await userManager.FindByEmailAsync("staff@test.com");
+
+        if (scanner is null)
+        {
+            return;
+        }
+
+        var targetIds = await db.Stations
+            .Where(s => DemoScannerStations.Contains(s.Name))
+            .Select(s => s.Id)
+            .ToListAsync();
+
+        var existing = await db.StationStaff
+            .Where(ss => ss.UserId == scanner.Id)
+            .Select(ss => ss.StationId)
+            .ToListAsync();
+
+        var missing = targetIds.Except(existing).ToList();
+
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        db.StationStaff.AddRange(missing.Select(id => new StationStaff
+        {
+            StationId = id,
+            UserId = scanner.Id,
+            Role = StationRole.Scanner,
+            AssignedAt = DateTimeOffset.UtcNow
+        }));
 
         await db.SaveChangesAsync();
     }
