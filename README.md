@@ -7,6 +7,9 @@ Akaryakıt istasyonlarında ve oto yıkamacılarda **kasada sıra beklemeden** y
 
 Çok kiracılı (multi-tenant) yazıldı: tek istasyona da kurulabilir, yüzlerce işyerine de.
 
+<img width="330" height="718" alt="image" src="https://github.com/user-attachments/assets/cab7e26a-1533-409a-9ab1-ccfaf0d1ea4f" />
+
+
 ```bash
 docker compose up --build
 # http://localhost:8080
