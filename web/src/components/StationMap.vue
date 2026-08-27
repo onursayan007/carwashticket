@@ -4,7 +4,7 @@ import { Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from 'map
 // sonra o adres yanlış oluyor ve worker 404 alıyor. Worker açılmayınca tile'lar
 // ayrıştırılamıyor: zemin çizilir, üstünde hiçbir veri görünmez.
 // Vite'ın ?url eki dosyayı asset olarak yayınlayıp doğru adresi veriyor.
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import type { StationSummaryDto } from '@/types'
 
