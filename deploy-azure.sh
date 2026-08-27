@@ -108,78 +108,72 @@ if ! az containerapp env show -g "$RG" -n "$APP-env" -o none 2>/dev/null; then
   }
 fi
 
-# --- Uygulama tanımı ---------------------------------------------------------
-# Tek app içinde iki konteyner: nginx dışarı bakar, API sadece localhost'ta.
-say "Uygulama tanımı hazırlanıyor"
-cat > /tmp/containerapp.yaml <<YAML
-properties:
-  configuration:
-    ingress:
-      external: true
-      targetPort: 80
-      transport: auto
-  template:
-    containers:
-      - name: web
-        image: ghcr.io/$GH_USER/carwash-web:latest
-        env:
-          - name: API_UPSTREAM
-            value: "127.0.0.1:8080"
-        resources:
-          cpu: 0.25
-          memory: 0.5Gi
-      - name: api
-        image: ghcr.io/$GH_USER/carwash-api:latest
-        env:
-          - name: ASPNETCORE_ENVIRONMENT
-            value: Development
-          - name: ASPNETCORE_URLS
-            value: http://+:8080
-          - name: ConnectionStrings__Postgres
-            value: "Host=$PG_HOST;Database=$PG_DB;Username=$PG_USER;Password=$PG_PASS;SslMode=Require"
-          - name: Database__MigrateOnStartup
-            value: "true"
-          - name: Jwt__Key
-            value: "$JWT_KEY"
-          - name: Jwt__Issuer
-            value: carwashticket
-          - name: Jwt__Audience
-            value: carwashticket-web
-          - name: Auth__RefreshCookieSecure
-            value: "true"
-          - name: Auth__RefreshCookieSameSite
-            value: Lax
-          - name: Payment__UseMock
-            value: "true"
-          - name: Payment__CommissionRate
-            value: "0.10"
-        resources:
-          cpu: 0.5
-          memory: 1.0Gi
-    scale:
-      minReplicas: 0
-      maxReplicas: 1
-YAML
+# --- Uygulamalar ---------------------------------------------------------------
+# İki ayrı Container App: API içeriye kapalı, web dışarı bakıyor ve /api'yi
+# API'nin iç adresine geçiriyor. Tarayıcı açısından tek origin, CORS yok.
+#
+# Tek app içinde iki konteyner de olurdu ama o yol YAML gerektiriyor ve CLI
+# sürümleri arasında kırılgan; bu yapı düz komutlarla kuruluyor.
 
-say "Uygulama oluşturuluyor"
-if az containerapp show -g "$RG" -n "$APP" -o none 2>/dev/null; then
-  az containerapp update -g "$RG" -n "$APP" --yaml /tmp/containerapp.yaml -o none
-else
-  az containerapp create -g "$RG" -n "$APP" --environment "$APP-env" --yaml /tmp/containerapp.yaml -o none
+API_APP="$APP-api"
+
+say "API uygulaması (dışarı kapalı)"
+if ! az containerapp show -g "$RG" -n "$API_APP" -o none 2>/dev/null; then
+  az containerapp create \
+    -g "$RG" -n "$API_APP" \
+    --environment "$APP-env" \
+    --image "ghcr.io/$GH_USER/carwash-api:latest" \
+    --ingress internal --target-port 8080 \
+    --cpu 0.5 --memory 1.0Gi \
+    --min-replicas 1 --max-replicas 1 \
+    -o none
 fi
+
+az containerapp update -g "$RG" -n "$API_APP" \
+  --set-env-vars \
+    "ASPNETCORE_ENVIRONMENT=Development" \
+    "ASPNETCORE_URLS=http://+:8080" \
+    "ConnectionStrings__Postgres=Host=$PG_HOST;Database=$PG_DB;Username=$PG_USER;Password=$PG_PASS;SslMode=Require" \
+    "Database__MigrateOnStartup=true" \
+    "Jwt__Key=$JWT_KEY" \
+    "Jwt__Issuer=carwashticket" \
+    "Jwt__Audience=carwashticket-web" \
+    "Auth__RefreshCookieSecure=true" \
+    "Auth__RefreshCookieSameSite=Lax" \
+    "Payment__UseMock=true" \
+    "Payment__CommissionRate=0.10" \
+  -o none
+
+API_FQDN="$(az containerapp show -g "$RG" -n "$API_APP" --query properties.configuration.ingress.fqdn -o tsv)"
+say "API iç adresi: $API_FQDN"
+
+say "Web uygulaması (dışarı açık)"
+if ! az containerapp show -g "$RG" -n "$APP" -o none 2>/dev/null; then
+  az containerapp create \
+    -g "$RG" -n "$APP" \
+    --environment "$APP-env" \
+    --image "ghcr.io/$GH_USER/carwash-web:latest" \
+    --ingress external --target-port 80 \
+    --cpu 0.25 --memory 0.5Gi \
+    --min-replicas 1 --max-replicas 1 \
+    -o none
+fi
+
+# nginx /api isteklerini buraya geçirecek.
+az containerapp update -g "$RG" -n "$APP" \
+  --set-env-vars "API_UPSTREAM=$API_FQDN" -o none
 
 FQDN="$(az containerapp show -g "$RG" -n "$APP" --query properties.configuration.ingress.fqdn -o tsv)"
 
-# Adres ancak app oluştuktan sonra belli oluyor; adrese bağlı ayarları şimdi veriyoruz.
+# Dış adres ancak web uygulaması kurulunca belli oluyor; adrese bağlı
+# ayarları API'ye şimdi veriyoruz.
 say "Adres ayarları: https://$FQDN"
-az containerapp update -g "$RG" -n "$APP" \
+az containerapp update -g "$RG" -n "$API_APP" \
   --set-env-vars \
     "Spa__BaseUrl=https://$FQDN" \
     "Payment__CallbackUrl=https://$FQDN/api/payments/callback" \
     "Cors__AllowedOrigins__0=https://$FQDN" \
   -o none
-
-rm -f /tmp/containerapp.yaml
 
 say "Kontrol"
 for i in $(seq 1 30); do
