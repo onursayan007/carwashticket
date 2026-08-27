@@ -142,6 +142,7 @@ az containerapp update -g "$RG" -n "$API_APP" \
     "Auth__RefreshCookieSameSite=Lax" \
     "Payment__UseMock=true" \
     "Payment__CommissionRate=0.10" \
+    "Https__Redirect=false" \
   -o none
 
 API_FQDN="$(az containerapp show -g "$RG" -n "$API_APP" --query properties.configuration.ingress.fqdn -o tsv)"

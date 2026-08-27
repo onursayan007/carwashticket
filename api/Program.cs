@@ -11,6 +11,7 @@ using CarWashTicket.Api.Services;
 using CarWashTicket.Api.Stations;
 using CarWashTicket.Api.Tickets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -133,6 +134,16 @@ builder.Services.AddScoped<INotificationSender, MockNotificationSender>();
 
 var app = builder.Build();
 
+// Ters vekilin (nginx / Azure ingress) arkasındayız: özgün şema ve istemci IP'si
+// başlıklarla geliyor. Bunlar okunmazsa uygulama isteği http sanır.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor,
+    // Vekil konteyner ağında, IP'si önceden bilinmiyor.
+    KnownNetworks = { },
+    KnownProxies = { }
+});
+
 // Konteynerde elle migration çalıştıracak kimse yok.
 if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 {
@@ -148,7 +159,12 @@ if (app.Environment.IsDevelopment())
     await DevDataSeeder.SeedAsync(app.Services);
 }
 
-app.UseHttpsRedirection();
+// TLS'i vekil sonlandırıyorsa uygulama kendisi yönlendirmemeli; aksi halde
+// istekler dışarıdan erişilemeyen iç adrese 301 ile gönderilir.
+if (app.Configuration.GetValue("Https:Redirect", true))
+{
+    app.UseHttpsRedirection();
+}
 
 // CORS, authentication'dan önce gelmeli.
 app.UseCors("web");

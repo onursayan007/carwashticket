@@ -39,6 +39,9 @@ services:
       Spa__BaseUrl: http://localhost:8080
       Cors__AllowedOrigins__0: http://localhost:8080
 
+      # TLS'i nginx sonlandırıyor; API kendi yönlendirmesini yapmamalı.
+      Https__Redirect: "false"
+
       Payment__UseMock: "true"
       Payment__CommissionRate: "0.10"
       Payment__CallbackUrl: http://localhost:8080/api/payments/callback
