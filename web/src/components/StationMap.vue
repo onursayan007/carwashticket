@@ -191,7 +191,7 @@ defineExpose({
     <div ref="container" class="h-full w-full" />
 
     <p
-      class="absolute bottom-2 left-2 z-10 rounded bg-black/80 px-2 py-1 font-mono text-[10px] leading-tight text-white"
+      class="absolute top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-black/85 px-3 py-2 text-center font-mono text-xs leading-relaxed text-white shadow-2xl"
     >
       stil:{{ diag.style }} kaynak:{{ diag.kaynak }} yuklendi:{{ diag.yuklendi }}
       hata:{{ diag.hata }} boyut:{{ diag.boyut }}
